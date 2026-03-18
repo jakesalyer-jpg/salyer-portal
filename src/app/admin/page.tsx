@@ -9,7 +9,7 @@ export default async function AdminDashboard() {
 
   const { data: projects } = await supabase
     .from('projects')
-    .select('*, client:profiles(full_name, email)')
+   .select('*')
     .order('created_at', { ascending: false })
 
   const allProjects = (projects ?? []) as Project[]
@@ -63,11 +63,7 @@ export default async function AdminDashboard() {
                     <StatusBadge status={p.status} />
                   </div>
                   <p style={{ fontSize: '12px', color: '#4a4030' }}>{p.address}</p>
-                  {p.client && (
-                    <p style={{ fontSize: '11px', color: '#4a4030', marginTop: '2px' }}>
-                      Client: {(p.client as any).full_name ?? (p.client as any).email}
-                    </p>
-                  )}
+                
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginLeft: '16px', flexShrink: 0 }}>
                   <div>
