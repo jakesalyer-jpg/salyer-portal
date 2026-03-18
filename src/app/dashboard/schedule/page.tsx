@@ -10,11 +10,11 @@ export default async function SchedulePage() {
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   const isAdmin = profile?.role === 'admin'
 
-  const { data: project } = await supabase
-    .from('projects')
-    .select('id, name, address')
-    .eq('client_id', user.id)
-    .single()
+const projectQuery = isAdmin
+    ? supabase.from('projects').select('id, name, address').order('created_at', { ascending: false }).limit(1).single()
+    : supabase.from('projects').select('id, name, address').eq('client_id', user.id).single()
+
+  const { data: project } = await projectQuery
 
   if (!project && !isAdmin) {
     return <div className="p-8 text-sm" style={{ color: '#6a5f50' }}>No project found.</div>
