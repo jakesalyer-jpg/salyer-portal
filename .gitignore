@@ -1,0 +1,7 @@
+.env.local
+.env
+"C:\Program Files\Git\bin\git.exe" rm --cached .env.local
+"C:\Program Files\Git\bin\git.exe" add .
+"C:\Program Files\Git\bin\git.exe" commit -m "Remove env file from git"
+"C:\Program Files\Git\bin\git.exe" push
+
