@@ -7,13 +7,13 @@ import StatusBadge from '@/components/shared/StatusBadge'
 export default async function AdminDashboard() {
   const supabase = createClient()
 
-  const { data: projects } = await supabase
+ const { data: projects, error } = await supabase
     .from('projects')
     .select('*, client:profiles(full_name, email)')
     .order('created_at', { ascending: false })
 
   const allProjects = (projects ?? []) as Project[]
-
+  console.log('Projects:', projects, 'Error:', error)
   const active = allProjects.filter((p) => p.status === 'active').length
   const preCon = allProjects.filter((p) => p.status === 'pre_construction').length
   const completed = allProjects.filter((p) => p.status === 'completed').length
