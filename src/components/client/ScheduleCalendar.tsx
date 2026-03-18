@@ -292,10 +292,3 @@ export default function ScheduleCalendar({ tasks: initialTasks, isAdmin, project
     </div>
   )
 }
-```
-
-Save with **Ctrl+S**, close, then:
-```
-"C:\Program Files\Git\bin\git.exe" add .
-"C:\Program Files\Git\bin\git.exe" commit -m "Restore ScheduleCalendar"
-"C:\Program Files\Git\bin\git.exe" push
