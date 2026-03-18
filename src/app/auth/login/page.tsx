@@ -27,57 +27,57 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-secondary flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        {/* Brand */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-2">
-            <div className="w-3 h-3 rounded-full bg-brand" />
-            <span className="text-lg font-semibold tracking-tight">Salyer Homes</span>
+    <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div style={{ width: '100%', maxWidth: '380px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <div style={{ fontSize: '28px', fontFamily: 'Cormorant Garamond, serif', fontWeight: 400, color: '#d4b483', letterSpacing: '4px', textTransform: 'uppercase', marginBottom: '8px' }}>
+            Salyer Homes
           </div>
-          <p className="text-sm text-muted-foreground">Sign in to your project portal</p>
+          <div style={{ fontSize: '10px', letterSpacing: '3px', textTransform: 'uppercase', color: '#4a4030' }}>
+            Client Portal
+          </div>
         </div>
 
-        {/* Card */}
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Email</label>
+        <div style={{ background: '#111111', border: '1px solid rgba(184,151,106,0.15)', borderRadius: '8px', padding: '32px' }}>
+          <form onSubmit={handleLogin}>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '2px', color: '#6a5f50', marginBottom: '8px' }}>Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="you@example.com"
-                className="w-full px-3 py-2 text-sm border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="your@email.com"
+                style={{ width: '100%', padding: '12px 16px', background: '#1a1a1a', border: '1px solid rgba(184,151,106,0.2)', borderRadius: '6px', color: '#f5f0e8', fontSize: '14px', outline: 'none' }}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Password</label>
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '2px', color: '#6a5f50', marginBottom: '8px' }}>Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="••••••••"
-                className="w-full px-3 py-2 text-sm border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                style={{ width: '100%', padding: '12px 16px', background: '#1a1a1a', border: '1px solid rgba(184,151,106,0.2)', borderRadius: '6px', color: '#f5f0e8', fontSize: '14px', outline: 'none' }}
               />
             </div>
             {error && (
-              <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{error}</p>
+              <div style={{ fontSize: '12px', color: '#e07070', background: 'rgba(180,60,60,0.1)', border: '1px solid rgba(180,60,60,0.2)', borderRadius: '6px', padding: '10px 14px', marginBottom: '16px' }}>
+                {error}
+              </div>
             )}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-brand text-white py-2.5 rounded-lg text-sm font-medium hover:bg-brand/90 disabled:opacity-50 transition-colors"
+              style={{ width: '100%', padding: '14px', background: '#b8976a', color: '#0a0a0a', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase', cursor: 'pointer', opacity: loading ? 0.6 : 1 }}
             >
-              {loading ? 'Signing in…' : 'Sign in'}
+              {loading ? 'Signing in…' : 'Sign In'}
             </button>
           </form>
         </div>
-
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          Don&apos;t have access? Contact your builder.
+        <p style={{ textAlign: 'center', fontSize: '11px', color: '#3a3020', marginTop: '24px' }}>
+          Need access? Contact your builder.
         </p>
       </div>
     </div>

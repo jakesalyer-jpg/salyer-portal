@@ -1,8 +1,5 @@
 import type { Metadata } from 'next'
-import { DM_Sans } from 'next/font/google'
 import './globals.css'
-
-const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-sans' })
 
 export const metadata: Metadata = {
   title: 'Salyer Homes — Client Portal',
@@ -11,8 +8,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${dmSans.variable} font-sans antialiased bg-background text-foreground`}>
+    <html lang="en">
+      <head>
+        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+      </head>
+      <body style={{ fontFamily: 'Jost, sans-serif', background: '#0a0a0a', color: '#f5f0e8' }}>
         {children}
       </body>
     </html>

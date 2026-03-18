@@ -35,50 +35,45 @@ export default function Sidebar({ profile }: Props) {
   }
 
   return (
-    <aside className="w-56 flex-shrink-0 bg-card border-r border-border flex flex-col h-full">
-      {/* Brand */}
-      <div className="flex items-center gap-2 px-5 py-5 border-b border-border">
-        <div className="w-2.5 h-2.5 rounded-full bg-brand flex-shrink-0" />
-        <span className="text-sm font-semibold tracking-tight">Salyer Homes</span>
+    <aside style={{ width: '220px', flexShrink: 0, display: 'flex', flexDirection: 'column', height: '100%', background: '#111111', borderRight: '1px solid rgba(184,151,106,0.12)' }}>
+      <div style={{ padding: '24px 20px', borderBottom: '1px solid rgba(184,151,106,0.12)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', fontWeight: 500, color: '#d4b483', letterSpacing: '2px', textTransform: 'uppercase' }}>
+          Salyer Homes
+        </div>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+      <nav style={{ flex: 1, padding: '16px 12px', overflowY: 'auto' }}>
         {nav.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || (href !== '/dashboard' && href !== '/admin' && pathname.startsWith(href))
           return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
-                active
-                  ? 'bg-brand/10 text-brand font-medium'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
-              }`}
-            >
-              <Icon className="w-4 h-4 flex-shrink-0" />
+            <Link key={href} href={href} style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '10px 12px', borderRadius: '6px', marginBottom: '2px',
+              fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px',
+              textDecoration: 'none', transition: 'all 0.15s',
+              color: active ? '#b8976a' : '#4a4030',
+              background: active ? 'rgba(184,151,106,0.08)' : 'transparent',
+              border: active ? '1px solid rgba(184,151,106,0.18)' : '1px solid transparent',
+            }}>
+              <Icon className="w-3.5 h-3.5" />
               {label}
             </Link>
           )
         })}
       </nav>
 
-      {/* User */}
-      <div className="px-3 pb-4 border-t border-border pt-3">
-        <div className="flex items-center gap-2.5 px-3 py-2 mb-1">
-          <div className="w-7 h-7 rounded-full bg-brand/20 flex items-center justify-center text-xs font-semibold text-brand flex-shrink-0">
+      <div style={{ padding: '16px 12px', borderTop: '1px solid rgba(184,151,106,0.12)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', marginBottom: '4px' }}>
+          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(184,151,106,0.1)', border: '1px solid rgba(184,151,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 500, color: '#b8976a', flexShrink: 0 }}>
             {getInitials(profile?.full_name)}
           </div>
-          <div className="min-w-0">
-            <p className="text-xs font-medium truncate">{profile?.full_name ?? 'User'}</p>
-            <p className="text-xs text-muted-foreground truncate capitalize">{profile?.role}</p>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: '12px', color: '#f5f0e8', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile?.full_name ?? 'User'}</p>
+            <p style={{ fontSize: '10px', color: '#4a4030', margin: 0, textTransform: 'capitalize' }}>{profile?.role}</p>
           </div>
         </div>
-        <button
-          onClick={signOut}
-          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors"
-        >
-          <LogOutIcon className="w-4 h-4" />
+        <button onClick={signOut} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#4a4030' }}>
+          <LogOutIcon className="w-3.5 h-3.5" />
           Sign out
         </button>
       </div>
@@ -86,7 +81,6 @@ export default function Sidebar({ profile }: Props) {
   )
 }
 
-// Inline SVG icons to avoid extra dependencies
 function HomeIcon({ className }: { className?: string }) {
   return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
 }
