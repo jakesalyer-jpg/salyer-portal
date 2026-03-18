@@ -15,11 +15,7 @@ interface Task {
   depends_on?: string | null
 }
 
-interface Props {
-  tasks: Task[]
-  isAdmin: boolean
-  projectId: string
-}
+
 
 const COLORS = [
   { bg: '#1a6b5a', text: '#7fe0c8', label: 'Teal' },
