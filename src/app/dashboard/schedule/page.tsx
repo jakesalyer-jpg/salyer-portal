@@ -31,7 +31,7 @@ const COLORS = [
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
-export default function ScheduleCalendar({ tasks: initialTasks, isAdmin, projectId }: Props) {
+export default function ScheduleCalendar({ tasks: initialTasks, isAdmin, projectId }: { tasks: Task[], isAdmin: boolean, projectId: string }) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
   const [view, setView] = useState<'month' | 'list'>('month')
   const [currentDate, setCurrentDate] = useState(new Date())
