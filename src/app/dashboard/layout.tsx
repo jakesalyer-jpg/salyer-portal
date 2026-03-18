@@ -14,11 +14,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .single()
 
   return (
-    <div className="flex h-screen bg-secondary overflow-hidden">
+    <div className="flex h-screen overflow-hidden" style={{ background: '#0a0a0a' }}>
       <Sidebar profile={profile} />
-      <main className="flex-1 overflow-y-auto">
-        {children}
-      </main>
+      <main className="flex-1 overflow-y-auto">{children}</main>
     </div>
   )
 }
+```
+
+Then go to `src` → `app` → `dashboard` → `page.tsx` → pencil ✏️ and find this line:
+```
+if (isAdmin) redirect('/admin')
