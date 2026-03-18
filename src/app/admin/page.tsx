@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { formatDate, formatCurrency, PROJECT_STATUS_LABELS } from '@/lib/utils'
+import { formatDate, formatCurrency } from '@/lib/utils'
 import type { Project } from '@/types'
 import Link from 'next/link'
 import StatusBadge from '@/components/shared/StatusBadge'
@@ -19,85 +19,79 @@ export default async function AdminDashboard() {
   const completed = allProjects.filter((p) => p.status === 'completed').length
   const totalValue = allProjects.reduce((sum, p) => sum + (p.contract_value ?? 0), 0)
 
+  const card = { background: '#111111', border: '1px solid rgba(184,151,106,0.12)', borderRadius: '8px' }
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">All Projects</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage every active build from one place.</p>
+          <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 400, color: '#f5f0e8' }}>All Projects</h1>
+          <p className="text-sm mt-1" style={{ color: '#6a5f50' }}>Manage every active build from one place.</p>
         </div>
-        <Link
-          href="/admin/projects/new"
-          className="px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand/90 transition-colors"
-        >
+        <Link href="/admin/projects/new" style={{ padding: '8px 18px', background: '#b8976a', color: '#0a0a0a', borderRadius: '6px', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', textDecoration: 'none' }}>
           + New Project
         </Link>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {[
-          { label: 'Active Builds', value: active, color: 'text-blue-600' },
-          { label: 'Pre-Construction', value: preCon, color: 'text-amber-600' },
-          { label: 'Completed', value: completed, color: 'text-brand' },
-          { label: 'Total Portfolio', value: formatCurrency(totalValue), color: 'text-foreground' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="bg-card border border-border rounded-xl p-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">{label}</p>
-            <p className={`text-2xl font-semibold ${color}`}>{value}</p>
+          { label: 'Active Builds', value: active },
+          { label: 'Pre-Construction', value: preCon },
+          { label: 'Completed', value: completed },
+          { label: 'Total Portfolio', value: formatCurrency(totalValue) },
+        ].map(({ label, value }) => (
+          <div key={label} style={{ ...card, padding: '16px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1px', background: 'linear-gradient(90deg, transparent, rgba(184,151,106,0.4), transparent)' }} />
+            <p style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: '#6a5f50', marginBottom: '8px' }}>{label}</p>
+            <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', color: '#b8976a' }}>{value}</p>
           </div>
         ))}
       </div>
 
-      {/* Project list */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-border bg-secondary/50">
-          <h2 className="text-sm font-semibold">Projects</h2>
+      <div style={card}>
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(184,151,106,0.12)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#6a5f50' }}>Projects</p>
         </div>
         {allProjects.length === 0 ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">
-            No projects yet.{' '}
-            <Link href="/admin/projects/new" className="text-brand hover:underline">Create your first project →</Link>
+          <div style={{ padding: '32px', textAlign: 'center' }}>
+            <p style={{ fontSize: '13px', color: '#4a4030', marginBottom: '8px' }}>No projects yet.</p>
+            <Link href="/admin/projects/new" style={{ fontSize: '12px', color: '#b8976a' }}>Create your first project →</Link>
           </div>
         ) : (
-          <div className="divide-y divide-border">
+          <div>
             {allProjects.map((p) => (
-              <Link
-                key={p.id}
-                href={`/admin/projects/${p.id}`}
-                className="flex items-center justify-between px-5 py-4 hover:bg-secondary/50 transition-colors"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-sm font-medium truncate">{p.name}</p>
+              <Link key={p.id} href={`/admin/projects/${p.id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid rgba(184,151,106,0.08)', textDecoration: 'none', cursor: 'pointer' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <p style={{ fontSize: '14px', fontWeight: 500, color: '#f5f0e8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
                     <StatusBadge status={p.status} />
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">{p.address}</p>
+                  <p style={{ fontSize: '12px', color: '#4a4030' }}>{p.address}</p>
                   {p.client && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p style={{ fontSize: '11px', color: '#4a4030', marginTop: '2px' }}>
                       Client: {(p.client as any).full_name ?? (p.client as any).email}
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-6 ml-4 flex-shrink-0 text-right">
-                  <div className="hidden md:block">
-                    <p className="text-xs text-muted-foreground">Progress</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div className="h-full bg-brand rounded-full" style={{ width: `${p.progress_percent}%` }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginLeft: '16px', flexShrink: 0 }}>
+                  <div>
+                    <p style={{ fontSize: '10px', color: '#4a4030', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Progress</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                      <div style={{ width: '80px', height: '2px', background: '#2a2318', borderRadius: '1px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', background: '#b8976a', width: `${p.progress_percent}%` }} />
                       </div>
-                      <span className="text-xs font-medium">{p.progress_percent}%</span>
+                      <span style={{ fontSize: '11px', color: '#b8976a' }}>{p.progress_percent}%</span>
                     </div>
                   </div>
-                  <div className="hidden md:block">
-                    <p className="text-xs text-muted-foreground">Est. Completion</p>
-                    <p className="text-xs font-medium mt-0.5">{formatDate(p.estimated_completion)}</p>
+                  <div>
+                    <p style={{ fontSize: '10px', color: '#4a4030', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Est. Completion</p>
+                    <p style={{ fontSize: '12px', color: '#f5f0e8', marginTop: '2px' }}>{formatDate(p.estimated_completion)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Value</p>
-                    <p className="text-xs font-medium mt-0.5">{formatCurrency(p.contract_value)}</p>
+                    <p style={{ fontSize: '10px', color: '#4a4030', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Value</p>
+                    <p style={{ fontSize: '12px', color: '#f5f0e8', marginTop: '2px' }}>{formatCurrency(p.contract_value)}</p>
                   </div>
-                  <svg className="w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <svg style={{ width: '16px', height: '16px', color: '#4a4030' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                   </svg>
                 </div>
