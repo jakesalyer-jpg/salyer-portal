@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 interface Phase {
-  id: string
+  id?: string
   name: string
   duration_days: number
   color: string
