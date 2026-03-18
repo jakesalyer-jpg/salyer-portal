@@ -20,8 +20,3 @@ export default async function DashboardLayout({ children }: { children: React.Re
     </div>
   )
 }
-```
-
-Then go to `src` → `app` → `dashboard` → `page.tsx` → pencil ✏️ and find this line:
-```
-if (isAdmin) redirect('/admin')
