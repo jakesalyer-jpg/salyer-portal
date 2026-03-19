@@ -86,18 +86,17 @@ export default async function SelectionTemplateDetailPage({ params }: { params: 
 
 function ApplySelectionsForm({ templateId, projects }: { templateId: string, projects: any[] }) {
   return (
-    <form action={`/api/admin/apply-selections`} method="POST">
-      <input type="hidden" name="templateId" value={templateId} />
+    <div>
       <div style={{ marginBottom: '12px' }}>
         <label style={{ display: 'block', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#6a5f50', marginBottom: '6px' }}>Select Project</label>
-        <select name="projectId" style={{ width: '100%', padding: '10px 14px', background: '#1a1a1a', border: '1px solid rgba(184,151,106,0.2)', borderRadius: '6px', color: '#f5f0e8', fontSize: '13px', outline: 'none' }}>
+        <select style={{ width: '100%', padding: '10px 14px', background: '#1a1a1a', border: '1px solid rgba(184,151,106,0.2)', borderRadius: '6px', color: '#f5f0e8', fontSize: '13px', outline: 'none' }}>
           <option value="">— Choose a project —</option>
           {projects.map(p => (
             <option key={p.id} value={p.id}>{p.name} — {p.address}</option>
           ))}
         </select>
       </div>
-      <Link href={`/admin/selections/${templateId}/apply`} style={{ display: 'block', padding: '10px', background: '#b8976a', color: '#0a0a0a', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>
+      <Link href={`/admin/selections/${templateId}/apply`} style={{ display: 'block', padding: '10px', background: '#b8976a', color: '#0a0a0a', borderRadius: '6px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center', textDecoration: 'none' }}>
         Apply to Project →
       </Link>
     </div>
