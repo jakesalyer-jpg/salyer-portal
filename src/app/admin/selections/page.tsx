@@ -52,16 +52,3 @@ export default async function SelectionTemplatesPage() {
     </div>
   )
 }
-```
-
-Save **Ctrl+S**, close. Now update the sidebar link. Go to GitHub → `src` → `components` → `shared` → `Sidebar.tsx` → pencil ✏️
-
-Change:
-```
-{ href: '/admin/templates/selections', label: 'Selections', icon: SwatchIcon },
-```
-
-To:
-```
-{ href: '/admin/selections', label: 'Selections', icon: SwatchIcon },
-```
