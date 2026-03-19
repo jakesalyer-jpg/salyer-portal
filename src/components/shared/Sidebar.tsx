@@ -19,7 +19,8 @@ const CLIENT_NAV = [
 const ADMIN_NAV = [
   { href: '/admin', label: 'All Projects', icon: HomeIcon },
   { href: '/admin/clients', label: 'Clients', icon: UsersIcon },
-  { href: '/admin/templates', label: 'Templates', icon: CalendarIcon },
+  { href: '/admin/templates', label: 'Schedule Templates', icon: CalendarIcon },
+  { href: '/admin/templates/selections', label: 'Selections', icon: SwatchIcon },
   { href: '/admin/subcontractors', label: 'Subcontractors', icon: WrenchIcon },
 ]
 
