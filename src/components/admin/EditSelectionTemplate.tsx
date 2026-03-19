@@ -42,7 +42,7 @@ export default function EditSelectionTemplate({ template, initialItems, projects
   const router = useRouter()
   const supabase = createClient()
 
-  const categories = [...new Set(items.map(i => i.category))]
+const categories = items.map(i => i.category).filter((cat, idx, arr) => arr.indexOf(cat) === idx)
 
   function updateItem(id: string, field: string, value: any) {
     setItems(items.map(item => item.id === id ? { ...item, [field]: value } : item))
