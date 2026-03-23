@@ -110,7 +110,7 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
           assigned_to: form.assigned_to || null,
           created_by: profile.id,
         })
-        .select('*, assigned:profiles(full_name, email)')
+       .select('*, assigned:profiles!todos_assigned_to_fkey(full_name, email)')
         .single()
       if (error) { setErrorMsg(error.message); setLoading(false); return }
       if (data) setTodos(prev => [data, ...prev])
