@@ -23,6 +23,7 @@ const ADMIN_NAV = [
   { href: '/admin/templates', label: 'Schedule Templates', icon: CalendarIcon },
   { href: '/admin/selections', label: 'Selections', icon: SwatchIcon },
   { href: '/admin/messages', label: 'Messages', icon: ChatIcon },
+  { href: '/admin/todos', label: 'To-Do', icon: CheckIcon },
   { href: '/admin/subcontractors', label: 'Subcontractors', icon: WrenchIcon },
 ]
 
@@ -111,4 +112,7 @@ function WrenchIcon({ className }: { className?: string }) {
 }
 function LogOutIcon({ className }: { className?: string }) {
   return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" /></svg>
+}
+function CheckIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
 }
