@@ -94,7 +94,7 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
           assigned_to: form.assigned_to || null,
         })
         .eq('id', editingTodo.id)
-        .select('*, assigned:profiles(full_name, email)')
+        .select('*, assigned:profiles!todos_assigned_to_fkey(full_name, email)')
         .single()
       if (error) { setErrorMsg(error.message); setLoading(false); return }
       if (data) setTodos(prev => prev.map(t => t.id === editingTodo.id ? data : t))
@@ -132,7 +132,7 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
       .from('todos')
       .update({ status: next })
       .eq('id', todo.id)
-      .select('*, assigned:profiles(full_name, email)')
+      .select('*, assigned:profiles!todos_assigned_to_fkey(full_name, email)')
       .single()
     if (!error && data) setTodos(prev => prev.map(t => t.id === todo.id ? data : t))
   }
