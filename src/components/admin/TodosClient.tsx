@@ -10,6 +10,7 @@ interface Todo {
   priority: 'low' | 'medium' | 'high'
   project_id?: string
   assigned_to?: string
+  subcontractor?: string
   created_at: string
   assigned?: { full_name: string; email: string }
 }
@@ -44,10 +45,13 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
   const [addingInProject, setAddingInProject] = useState<string | null>(null)
   const [inlineTitle, setInlineTitle] = useState('')
   const [inlineAssigned, setInlineAssigned] = useState('')
+  const [inlineSub, setInlineSub] = useState('')
   const [inlinePriority, setInlinePriority] = useState<Todo['priority']>('medium')
-  const [editForm, setEditForm] = useState({ title: '', status: 'pending' as Todo['status'], priority: 'medium' as Todo['priority'], project_id: '', assigned_to: '' })
+  const [editForm, setEditForm] = useState({
+    title: '', status: 'pending' as Todo['status'], priority: 'medium' as Todo['priority'],
+    project_id: '', assigned_to: '', subcontractor: '',
+  })
 
-  // Templates state
   const [templateItems, setTemplateItems] = useState<TemplateItem[]>([])
   const [templatesLoading, setTemplatesLoading] = useState(false)
   const [newPhase, setNewPhase] = useState('')
@@ -55,9 +59,7 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
   const [newItemPhase, setNewItemPhase] = useState('')
   const [applyingTo, setApplyingTo] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (tab === 'templates') loadTemplates()
-  }, [tab])
+  useEffect(() => { if (tab === 'templates') loadTemplates() }, [tab])
 
   const loadTemplates = async () => {
     setTemplatesLoading(true)
@@ -67,7 +69,6 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
   }
 
   const phases = Array.from(new Set(templateItems.map(t => t.phase)))
-
   const priorityColor = (p: string) => p === 'high' ? '#ef4444' : p === 'medium' ? GOLD : '#9ca3af'
 
   const todosByProject: Record<string, Todo[]> = {}
@@ -87,6 +88,7 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
     setAddingInProject(projectId)
     setInlineTitle('')
     setInlineAssigned('')
+    setInlineSub('')
     setInlinePriority('medium')
     setEditingTodo(null)
   }
@@ -99,7 +101,11 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
     setErrorMsg(null)
     const { data, error } = await supabase
       .from('todos')
-      .insert({ title: inlineTitle, status: 'pending', priority: inlinePriority, project_id: projectId || null, assigned_to: inlineAssigned || null, created_by: profile.id })
+      .insert({
+        title: inlineTitle, status: 'pending', priority: inlinePriority,
+        project_id: projectId || null, assigned_to: inlineAssigned || null,
+        subcontractor: inlineSub || null, created_by: profile.id,
+      })
       .select('*, assigned:profiles!todos_assigned_to_fkey(full_name, email)')
       .single()
     if (error) { setErrorMsg(error.message); setLoading(false); return }
@@ -122,14 +128,26 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
 
   const openEdit = (todo: Todo) => {
     setEditingTodo(todo)
-    setEditForm({ title: todo.title, status: todo.status, priority: todo.priority, project_id: todo.project_id ?? '', assigned_to: todo.assigned_to ?? '' })
+    setEditForm({
+      title: todo.title, status: todo.status, priority: todo.priority,
+      project_id: todo.project_id ?? '', assigned_to: todo.assigned_to ?? '',
+      subcontractor: todo.subcontractor ?? '',
+    })
     cancelInlineAdd()
   }
 
   const handleEditSubmit = async () => {
     if (!editingTodo || !editForm.title.trim()) return
     setLoading(true)
-    const { data, error } = await supabase.from('todos').update({ title: editForm.title, status: editForm.status, priority: editForm.priority, project_id: editForm.project_id || null, assigned_to: editForm.assigned_to || null }).eq('id', editingTodo.id).select('*, assigned:profiles!todos_assigned_to_fkey(full_name, email)').single()
+    const { data, error } = await supabase.from('todos')
+      .update({
+        title: editForm.title, status: editForm.status, priority: editForm.priority,
+        project_id: editForm.project_id || null, assigned_to: editForm.assigned_to || null,
+        subcontractor: editForm.subcontractor || null,
+      })
+      .eq('id', editingTodo.id)
+      .select('*, assigned:profiles!todos_assigned_to_fkey(full_name, email)')
+      .single()
     if (error) { setErrorMsg(error.message); setLoading(false); return }
     if (data) setTodos(prev => prev.map(t => t.id === editingTodo.id ? data : t))
     setLoading(false)
@@ -141,11 +159,8 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
     setApplyingTo(projectId)
     setErrorMsg(null)
     const inserts = templateItems.map(ti => ({
-      title: `[${ti.phase}] ${ti.item}`,
-      status: 'pending' as const,
-      priority: 'medium' as const,
-      project_id: projectId,
-      created_by: profile.id,
+      title: `[${ti.phase}] ${ti.item}`, status: 'pending' as const,
+      priority: 'medium' as const, project_id: projectId, created_by: profile.id,
     }))
     const { data, error } = await supabase.from('todos').insert(inserts).select('*, assigned:profiles!todos_assigned_to_fkey(full_name, email)')
     if (error) { setErrorMsg(error.message) }
@@ -153,7 +168,6 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
     setApplyingTo(null)
   }
 
-  // Template management
   const addPhase = async () => {
     if (!newPhase.trim()) return
     setTemplatesLoading(true)
@@ -193,11 +207,21 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
   const TodoRow = ({ todo }: { todo: Todo }) => {
     const isDone = todo.status === 'done'
     const isEditing = editingTodo?.id === todo.id
+    const teamMember = team.find(m => m.id === todo.assigned_to)
+
     if (isEditing) return (
       <div style={{ padding: '12px 0', borderBottom: `1px solid ${BORDER}` }}>
-        <input value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} onKeyDown={e => e.key === 'Enter' && handleEditSubmit()} autoFocus
+        <input value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
+          onKeyDown={e => e.key === 'Enter' && handleEditSubmit()} autoFocus
           style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1.5px solid ${GOLD}`, fontSize: '15px', background: BG, color: '#2C1A00', marginBottom: '8px', boxSizing: 'border-box' }} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+          <input placeholder="Subcontractor" value={editForm.subcontractor} onChange={e => setEditForm(f => ({ ...f, subcontractor: e.target.value }))}
+            style={{ padding: '7px 10px', borderRadius: '7px', border: `1px solid ${BORDER}`, fontSize: '13px', background: BG, color: '#2C1A00' }} />
+          <select value={editForm.assigned_to} onChange={e => setEditForm(f => ({ ...f, assigned_to: e.target.value }))}
+            style={{ padding: '7px 10px', borderRadius: '7px', border: `1px solid ${BORDER}`, fontSize: '13px', background: BG, color: '#2C1A00' }}>
+            <option value="">Unassigned</option>
+            {team.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+          </select>
           <select value={editForm.priority} onChange={e => setEditForm(f => ({ ...f, priority: e.target.value as Todo['priority'] }))}
             style={{ padding: '7px 10px', borderRadius: '7px', border: `1px solid ${BORDER}`, fontSize: '13px', background: BG, color: '#2C1A00' }}>
             <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
@@ -206,13 +230,8 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
             style={{ padding: '7px 10px', borderRadius: '7px', border: `1px solid ${BORDER}`, fontSize: '13px', background: BG, color: '#2C1A00' }}>
             <option value="pending">Pending</option><option value="in_progress">In Progress</option><option value="done">Done</option>
           </select>
-          <select value={editForm.assigned_to} onChange={e => setEditForm(f => ({ ...f, assigned_to: e.target.value }))}
-            style={{ padding: '7px 10px', borderRadius: '7px', border: `1px solid ${BORDER}`, fontSize: '13px', background: BG, color: '#2C1A00' }}>
-            <option value="">Unassigned</option>
-            {team.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
-          </select>
           <select value={editForm.project_id} onChange={e => setEditForm(f => ({ ...f, project_id: e.target.value }))}
-            style={{ padding: '7px 10px', borderRadius: '7px', border: `1px solid ${BORDER}`, fontSize: '13px', background: BG, color: '#2C1A00' }}>
+            style={{ padding: '7px 10px', borderRadius: '7px', border: `1px solid ${BORDER}`, fontSize: '13px', background: BG, color: '#2C1A00', gridColumn: 'span 2' }}>
             <option value="">No Job</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
@@ -224,18 +243,37 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
         </div>
       </div>
     )
+
     return (
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '10px 0', borderBottom: `1px solid ${BORDER}` }}>
-        <button onClick={() => handleToggleDone(todo)} style={{ width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0, marginTop: '2px', border: `2px solid ${isDone ? GOLD_DARK : GOLD}`, background: isDone ? GOLD_DARK : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: `1px solid ${BORDER}` }}>
+        {/* Circle toggle */}
+        <button onClick={() => handleToggleDone(todo)} style={{ width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0, border: `2px solid ${isDone ? GOLD_DARK : GOLD}`, background: isDone ? GOLD_DARK : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {isDone && <svg width="11" height="9" viewBox="0 0 11 9" fill="none"><path d="M1 4L4 7L10 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
         </button>
+
+        {/* Subcontractor */}
+        <div style={{ width: '140px', flexShrink: 0 }}>
+          {todo.subcontractor
+            ? <span style={{ fontSize: '12px', fontWeight: '600', color: GOLD_DARK, background: GOLD_LIGHT, borderRadius: '6px', padding: '2px 8px', display: 'inline-block' }}>{todo.subcontractor}</span>
+            : <span style={{ fontSize: '12px', color: '#C0A870', fontStyle: 'italic' }}>No sub</span>
+          }
+        </div>
+
+        {/* Title */}
         <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => openEdit(todo)}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '15px', fontWeight: '500', color: isDone ? '#A09070' : '#2C1A00', textDecoration: isDone ? 'line-through' : 'none' }}>{todo.title}</span>
-            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: priorityColor(todo.priority), display: 'inline-block', flexShrink: 0 }} />
-            {todo.status === 'in_progress' && <span style={{ fontSize: '11px', background: '#dbeafe', color: '#1d4ed8', borderRadius: '4px', padding: '1px 6px', fontWeight: '600' }}>In Progress</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '14px', fontWeight: '500', color: isDone ? '#A09070' : '#2C1A00', textDecoration: isDone ? 'line-through' : 'none' }}>{todo.title}</span>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: priorityColor(todo.priority), display: 'inline-block', flexShrink: 0 }} />
+            {todo.status === 'in_progress' && <span style={{ fontSize: '10px', background: '#dbeafe', color: '#1d4ed8', borderRadius: '4px', padding: '1px 5px', fontWeight: '600' }}>In Progress</span>}
           </div>
-          {todo.assigned?.full_name && <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#A07830' }}>Assigned: {todo.assigned.full_name}</p>}
+        </div>
+
+        {/* Team Member */}
+        <div style={{ width: '130px', flexShrink: 0, textAlign: 'right' }}>
+          {teamMember
+            ? <span style={{ fontSize: '12px', fontWeight: '600', color: '#2C1A00', background: BORDER, borderRadius: '6px', padding: '2px 8px', display: 'inline-block' }}>{teamMember.full_name}</span>
+            : <span style={{ fontSize: '12px', color: '#C0A870', fontStyle: 'italic' }}>Unassigned</span>
+          }
         </div>
       </div>
     )
@@ -249,15 +287,17 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
           onKeyDown={e => { if (e.key === 'Enter') handleInlineAdd(projectId); if (e.key === 'Escape') cancelInlineAdd() }}
           autoFocus style={{ flex: 1, padding: '6px 10px', borderRadius: '7px', border: `1.5px solid ${GOLD}`, fontSize: '15px', background: BG, color: '#2C1A00', outline: 'none' }} />
       </div>
-      <div style={{ display: 'flex', gap: '8px', paddingLeft: '32px', marginBottom: '8px' }}>
-        <select value={inlinePriority} onChange={e => setInlinePriority(e.target.value as Todo['priority'])}
-          style={{ padding: '6px 10px', borderRadius: '7px', border: `1px solid ${BORDER}`, fontSize: '13px', background: BG, color: '#2C1A00' }}>
-          <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
-        </select>
+      <div style={{ display: 'flex', gap: '8px', paddingLeft: '32px', marginBottom: '8px', flexWrap: 'wrap' }}>
+        <input placeholder="Subcontractor" value={inlineSub} onChange={e => setInlineSub(e.target.value)}
+          style={{ padding: '6px 10px', borderRadius: '7px', border: `1px solid ${BORDER}`, fontSize: '13px', background: BG, color: '#2C1A00', width: '160px' }} />
         <select value={inlineAssigned} onChange={e => setInlineAssigned(e.target.value)}
           style={{ padding: '6px 10px', borderRadius: '7px', border: `1px solid ${BORDER}`, fontSize: '13px', background: BG, color: '#2C1A00' }}>
           <option value="">Unassigned</option>
           {team.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+        </select>
+        <select value={inlinePriority} onChange={e => setInlinePriority(e.target.value as Todo['priority'])}
+          style={{ padding: '6px 10px', borderRadius: '7px', border: `1px solid ${BORDER}`, fontSize: '13px', background: BG, color: '#2C1A00' }}>
+          <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
         </select>
       </div>
       <div style={{ display: 'flex', gap: '8px', paddingLeft: '32px' }}>
@@ -290,7 +330,20 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
         </div>
         {isOpen && (
           <div style={{ padding: '0 16px' }}>
-            <div style={{ display: 'flex', gap: '8px', padding: '12px 0', borderBottom: `1px solid ${BORDER}` }}>
+            {/* Column headers */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: `1px solid ${BORDER}` }}>
+              <div style={{ width: '22px', flexShrink: 0 }} />
+              <div style={{ width: '140px', flexShrink: 0 }}>
+                <span style={{ fontSize: '11px', fontWeight: '700', color: '#A07830', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Subcontractor</span>
+              </div>
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: '11px', fontWeight: '700', color: '#A07830', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Task</span>
+              </div>
+              <div style={{ width: '130px', textAlign: 'right', flexShrink: 0 }}>
+                <span style={{ fontSize: '11px', fontWeight: '700', color: '#A07830', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Assigned To</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', padding: '10px 0', borderBottom: `1px solid ${BORDER}` }}>
               <button onClick={() => applyTemplate(projectId)} disabled={applyingTo === projectId || templateItems.length === 0}
                 style={{ background: GOLD_DARK, color: '#fff', border: 'none', borderRadius: '7px', padding: '7px 14px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
                 {applyingTo === projectId ? 'Applying...' : 'Apply Construction Template'}
@@ -313,8 +366,7 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
 
   return (
     <div style={{ minHeight: '100vh', background: BG, padding: '32px 24px' }}>
-      <div style={{ maxWidth: '680px', margin: '0 auto' }}>
-
+      <div style={{ maxWidth: '780px', margin: '0 auto' }}>
         <div style={{ marginBottom: '24px' }}>
           <h1 style={{ fontSize: '32px', fontWeight: '800', color: '#2C1A00', margin: '0 0 16px' }}>Team To-Do</h1>
           <div style={{ display: 'flex', gap: '4px', background: GOLD_LIGHT, borderRadius: '10px', padding: '4px', width: 'fit-content' }}>
@@ -363,8 +415,6 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
         {tab === 'templates' && (
           <div>
             <p style={{ color: '#8B6914', margin: '0 0 20px', fontSize: '14px' }}>Manage your construction checklist template. Changes apply to future jobs.</p>
-
-            {/* Add new phase */}
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
               <p style={{ margin: '0 0 10px', fontWeight: '700', color: '#2C1A00', fontSize: '14px' }}>Add New Phase</p>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -374,9 +424,7 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
                 <button onClick={addPhase} style={{ background: GOLD, color: '#fff', border: 'none', borderRadius: '7px', padding: '8px 18px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>Add Phase</button>
               </div>
             </div>
-
             {templatesLoading && <p style={{ color: '#8B6914', fontSize: '14px' }}>Loading...</p>}
-
             {phases.map(phase => {
               const items = templateItems.filter(t => t.phase === phase).sort((a, b) => a.order_index - b.order_index)
               return (
@@ -392,17 +440,13 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
                     {items.map((item, idx) => (
                       <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: `1px solid ${BORDER}` }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <button onClick={() => moveItem(item, 'up')} disabled={idx === 0}
-                            style={{ background: 'none', border: 'none', cursor: idx === 0 ? 'default' : 'pointer', color: idx === 0 ? '#D4C5A0' : GOLD_DARK, fontSize: '12px', padding: '0', lineHeight: 1 }}>▲</button>
-                          <button onClick={() => moveItem(item, 'down')} disabled={idx === items.length - 1}
-                            style={{ background: 'none', border: 'none', cursor: idx === items.length - 1 ? 'default' : 'pointer', color: idx === items.length - 1 ? '#D4C5A0' : GOLD_DARK, fontSize: '12px', padding: '0', lineHeight: 1 }}>▼</button>
+                          <button onClick={() => moveItem(item, 'up')} disabled={idx === 0} style={{ background: 'none', border: 'none', cursor: idx === 0 ? 'default' : 'pointer', color: idx === 0 ? '#D4C5A0' : GOLD_DARK, fontSize: '12px', padding: '0', lineHeight: 1 }}>▲</button>
+                          <button onClick={() => moveItem(item, 'down')} disabled={idx === items.length - 1} style={{ background: 'none', border: 'none', cursor: idx === items.length - 1 ? 'default' : 'pointer', color: idx === items.length - 1 ? '#D4C5A0' : GOLD_DARK, fontSize: '12px', padding: '0', lineHeight: 1 }}>▼</button>
                         </div>
                         <span style={{ flex: 1, fontSize: '14px', color: '#2C1A00' }}>{item.item}</span>
-                        <button onClick={() => deleteTemplateItem(item.id)}
-                          style={{ background: 'none', border: '1px solid #fecaca', borderRadius: '5px', padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#dc2626' }}>Remove</button>
+                        <button onClick={() => deleteTemplateItem(item.id)} style={{ background: 'none', border: '1px solid #fecaca', borderRadius: '5px', padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#dc2626' }}>Remove</button>
                       </div>
                     ))}
-                    {/* Add item to this phase */}
                     {newItemPhase === phase
                       ? <div style={{ display: 'flex', gap: '8px', padding: '10px 0' }}>
                           <input placeholder="New checklist item" value={newItem} onChange={e => setNewItem(e.target.value)}
