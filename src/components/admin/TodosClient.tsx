@@ -205,8 +205,7 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
         <button onClick={() => handleToggleDone(todo)} style={{ width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0, marginTop: '2px', border: `2px solid ${isDone ? GOLD_DARK : GOLD}`, background: isDone ? GOLD_DARK : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {isDone && <svg width="11" height="9" viewBox="0 0 11 9" fill="none"><path d="M1 4L4 7L10 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
         </button>
-        <div style={{ flex: 1, minWidth: 0 }} onClick={() => openEdit(todo)} role="button" style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => openEdit(todo)}>          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '15px', fontWeight: '500', color: isDone ? '#A09070' : '#2C1A00', textDecoration: isDone ? 'line-through' : 'none' }}>{todo.title}</span>
             <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: priorityColor(todo.priority), display: 'inline-block', flexShrink: 0 }} />
             {todo.status === 'in_progress' && <span style={{ fontSize: '11px', background: '#dbeafe', color: '#1d4ed8', borderRadius: '4px', padding: '1px 6px', fontWeight: '600' }}>In Progress</span>}
