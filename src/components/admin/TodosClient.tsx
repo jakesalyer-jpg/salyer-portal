@@ -66,7 +66,7 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
     setTemplatesLoading(false)
   }
 
-  const phases = [...new Set(templateItems.map(t => t.phase))]
+  const phases = Array.from(new Set(templateItems.map(t => t.phase)))
 
   const priorityColor = (p: string) => p === 'high' ? '#ef4444' : p === 'medium' ? GOLD : '#9ca3af'
 
