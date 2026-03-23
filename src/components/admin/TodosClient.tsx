@@ -138,7 +138,6 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
 
   const priorityColor = (p: string) => p === 'high' ? '#ef4444' : p === 'medium' ? GOLD : '#9ca3af'
 
-  // Group todos by project
   const todosByProject: Record<string, Todo[]> = {}
   const unassignedTodos: Todo[] = []
 
@@ -156,21 +155,14 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
   const TodoRow = ({ todo }: { todo: Todo }) => {
     const isDone = todo.status === 'done'
     return (
-      <div style={{
-        display: 'flex', alignItems: 'flex-start', gap: '12px',
-        padding: '10px 0',
-        borderBottom: `1px solid ${BORDER}`,
-      }}>
-        {/* Circle */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '10px 0', borderBottom: `1px solid ${BORDER}` }}>
         <button
           onClick={() => handleToggleDone(todo)}
           style={{
             width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0, marginTop: '1px',
             border: `2px solid ${isDone ? GOLD_DARK : GOLD}`,
             background: isDone ? GOLD_DARK : 'transparent',
-            cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'all 0.15s',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
           {isDone && (
@@ -180,7 +172,6 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
           )}
         </button>
 
-        {/* Content */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <span style={{
@@ -190,37 +181,20 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
             }}>
               {todo.title}
             </span>
-            <span style={{
-              width: '7px', height: '7px', borderRadius: '50%',
-              background: priorityColor(todo.priority),
-              flexShrink: 0, display: 'inline-block',
-            }} />
+            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: priorityColor(todo.priority), flexShrink: 0, display: 'inline-block' }} />
             {todo.status === 'in_progress' && (
-              <span style={{ fontSize: '11px', background: '#dbeafe', color: '#1d4ed8', borderRadius: '4px', padding: '1px 6px', fontWeight: '600' }}>
-                In Progress
-              </span>
+              <span style={{ fontSize: '11px', background: '#dbeafe', color: '#1d4ed8', borderRadius: '4px', padding: '1px 6px', fontWeight: '600' }}>In Progress</span>
             )}
           </div>
-          {todo.description && (
-            <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#8B6914' }}>{todo.description}</p>
-          )}
+          {todo.description && <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#8B6914' }}>{todo.description}</p>}
           {todo.assigned?.full_name && (
-            <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#A07830', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ fontSize: '11px' }}>👤</span> {todo.assigned.full_name}
-            </p>
+            <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#A07830' }}>Assigned: {todo.assigned.full_name}</p>
           )}
         </div>
 
-        {/* Actions */}
         <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-          <button onClick={() => openEdit(todo)} style={{
-            background: 'none', border: `1px solid ${BORDER}`, borderRadius: '5px',
-            padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: GOLD_DARK,
-          }}>Edit</button>
-          <button onClick={() => handleDelete(todo.id)} style={{
-            background: 'none', border: '1px solid #fecaca', borderRadius: '5px',
-            padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#dc2626',
-          }}>✕</button>
+          <button onClick={() => openEdit(todo)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: '5px', padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: GOLD_DARK }}>Edit</button>
+          <button onClick={() => handleDelete(todo.id)} style={{ background: 'none', border: '1px solid #fecaca', borderRadius: '5px', padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#dc2626' }}>X</button>
         </div>
       </div>
     )
@@ -233,23 +207,18 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
 
     return (
       <div style={{ marginBottom: '16px', background: CARD, borderRadius: '14px', border: `1px solid ${BORDER}`, overflow: 'hidden' }}>
-        {/* Group Header */}
         <div
           onClick={() => projectId && setSelectedProject(isOpen ? null : projectId)}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '14px 16px',
-            cursor: projectId ? 'pointer' : 'default',
+            padding: '14px 16px', cursor: projectId ? 'pointer' : 'default',
             borderBottom: isOpen ? `1px solid ${BORDER}` : 'none',
             background: GOLD_LIGHT,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{
-              width: '28px', height: '28px', borderRadius: '8px',
-              background: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <span style={{ fontSize: '14px' }}>{projectId ? '📋' : '📌'}</span>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: '14px' }}>{projectId ? 'J' : 'G'}</span>
             </div>
             <div>
               <p style={{ margin: 0, fontWeight: '700', fontSize: '15px', color: '#2C1A00' }}>{label}</p>
@@ -257,40 +226,24 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{
-              background: GOLD, color: '#fff', borderRadius: '12px',
-              padding: '2px 10px', fontSize: '13px', fontWeight: '700', minWidth: '28px', textAlign: 'center',
-            }}>
+            <span style={{ background: GOLD, color: '#fff', borderRadius: '12px', padding: '2px 10px', fontSize: '13px', fontWeight: '700', minWidth: '28px', textAlign: 'center' }}>
               {items.length - done}
             </span>
             {projectId && (
-              <span style={{ color: GOLD_DARK, fontSize: '18px', fontWeight: '300' }}>{isOpen ? '⌃' : '⌄'}</span>
+              <span style={{ color: GOLD_DARK, fontSize: '18px' }}>{isOpen ? 'v' : '>'}</span>
             )}
           </div>
         </div>
 
-        {/* Todo Rows */}
         {isOpen && (
           <div style={{ padding: '0 16px' }}>
-            {items.length === 0 && (
-              <p style={{ padding: '14px 0', color: '#B8A070', fontSize: '14px', margin: 0 }}>No tasks yet.</p>
-            )}
+            {items.length === 0 && <p style={{ padding: '14px 0', color: '#B8A070', fontSize: '14px', margin: 0 }}>No tasks yet.</p>}
             {items.map(todo => <TodoRow key={todo.id} todo={todo} />)}
-
-            {/* Inline Add Button */}
             <div
               onClick={() => openAddForProject(projectId ?? '')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '10px',
-                padding: '10px 0', cursor: 'pointer', color: GOLD_DARK,
-                fontSize: '14px', fontWeight: '500',
-              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', cursor: 'pointer', color: GOLD_DARK, fontSize: '14px', fontWeight: '500' }}
             >
-              <div style={{
-                width: '22px', height: '22px', borderRadius: '50%',
-                border: `2px dashed ${GOLD}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: GOLD, fontSize: '16px', lineHeight: 1,
-              }}>+</div>
+              <div style={{ width: '22px', height: '22px', borderRadius: '50%', border: `2px dashed ${GOLD}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: GOLD, fontSize: '16px' }}>+</div>
               Add task
             </div>
           </div>
@@ -302,35 +255,20 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
   return (
     <div style={{ minHeight: '100vh', background: BG, padding: '32px 24px' }}>
       <div style={{ maxWidth: '680px', margin: '0 auto' }}>
-
-        {/* Header */}
         <div style={{ marginBottom: '28px' }}>
           <h1 style={{ fontSize: '32px', fontWeight: '800', color: '#2C1A00', margin: '0 0 4px' }}>Team To-Do</h1>
-          <p style={{ color: '#8B6914', margin: 0, fontSize: '14px' }}>
-            {totalDone} of {todos.length} tasks completed
-          </p>
+          <p style={{ color: '#8B6914', margin: 0, fontSize: '14px' }}>{totalDone} of {todos.length} tasks completed</p>
         </div>
 
-        {/* Global Add Task Button */}
         <button
           onClick={() => { resetForm(); setShowForm(true) }}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            background: GOLD, color: '#fff', border: 'none', borderRadius: '12px',
-            padding: '12px 20px', fontWeight: '700', cursor: 'pointer', fontSize: '15px',
-            marginBottom: '24px', boxShadow: `0 2px 8px ${GOLD}55`,
-          }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', background: GOLD, color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 20px', fontWeight: '700', cursor: 'pointer', fontSize: '15px', marginBottom: '24px' }}
         >
-          <span style={{ fontSize: '20px', lineHeight: 1 }}>+</span> New Task
+          + New Task
         </button>
 
-        {/* Add/Edit Form Modal */}
         {showForm && (
-          <div style={{
-            background: CARD, border: `1px solid ${BORDER}`, borderRadius: '16px',
-            padding: '20px', marginBottom: '24px',
-            boxShadow: `0 4px 24px ${GOLD}33`,
-          }}>
+          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: '16px', padding: '20px', marginBottom: '24px' }}>
             <h2 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: '700', color: '#2C1A00' }}>
               {editingTodo ? 'Edit Task' : 'New Task'}
             </h2>
@@ -341,30 +279,21 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
                 onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
                 onKeyDown={e => e.key === 'Enter' && handleSubmit()}
                 autoFocus
-                style={{
-                  padding: '10px 14px', borderRadius: '8px',
-                  border: `1.5px solid ${BORDER}`, fontSize: '15px',
-                  background: BG, color: '#2C1A00',
-                  outline: 'none',
-                }}
+                style={{ padding: '10px 14px', borderRadius: '8px', border: `1.5px solid ${BORDER}`, fontSize: '15px', background: BG, color: '#2C1A00' }}
               />
               <textarea
                 placeholder="Notes (optional)"
                 value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                 rows={2}
-                style={{
-                  padding: '10px 14px', borderRadius: '8px',
-                  border: `1.5px solid ${BORDER}`, fontSize: '14px',
-                  background: BG, color: '#2C1A00', resize: 'vertical',
-                }}
+                style={{ padding: '10px 14px', borderRadius: '8px', border: `1.5px solid ${BORDER}`, fontSize: '14px', background: BG, color: '#2C1A00', resize: 'vertical' }}
               />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as Todo['priority'] }))}
                   style={{ padding: '10px 12px', borderRadius: '8px', border: `1.5px solid ${BORDER}`, fontSize: '14px', background: BG, color: '#2C1A00' }}>
-                  <option value="low">🟢 Low</option>
-                  <option value="medium">🟡 Medium</option>
-                  <option value="high">🔴 High</option>
+                  <option value="low">Low Priority</option>
+                  <option value="medium">Medium Priority</option>
+                  <option value="high">High Priority</option>
                 </select>
                 <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as Todo['status'] }))}
                   style={{ padding: '10px 12px', borderRadius: '8px', border: `1.5px solid ${BORDER}`, fontSize: '14px', background: BG, color: '#2C1A00' }}>
@@ -374,41 +303,29 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
                 </select>
                 <select value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}
                   style={{ padding: '10px 12px', borderRadius: '8px', border: `1.5px solid ${BORDER}`, fontSize: '14px', background: BG, color: '#2C1A00' }}>
-                  <option value="">📌 No Job</option>
-                  {projects.map(p => <option key={p.id} value={p.id}>📋 {p.name}</option>)}
+                  <option value="">No Job</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
                 <select value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))}
                   style={{ padding: '10px 12px', borderRadius: '8px', border: `1.5px solid ${BORDER}`, fontSize: '14px', background: BG, color: '#2C1A00' }}>
-                  <option value="">👤 Unassigned</option>
-                  {team.map(m => <option key={m.id} value={m.id}>👤 {m.full_name}</option>)}
+                  <option value="">Unassigned</option>
+                  {team.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
                 </select>
               </div>
             </div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-              <button onClick={handleSubmit} disabled={loading} style={{
-                background: GOLD, color: '#fff', border: 'none', borderRadius: '8px',
-                padding: '10px 22px', fontWeight: '700', cursor: 'pointer', fontSize: '14px',
-              }}>
+              <button onClick={handleSubmit} disabled={loading} style={{ background: GOLD, color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 22px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>
                 {loading ? 'Saving...' : editingTodo ? 'Save Changes' : 'Add Task'}
               </button>
-              <button onClick={resetForm} style={{
-                background: 'none', color: '#8B6914', border: `1px solid ${BORDER}`,
-                borderRadius: '8px', padding: '10px 18px', fontWeight: '600', cursor: 'pointer', fontSize: '14px',
-              }}>
+              <button onClick={resetForm} style={{ background: 'none', color: '#8B6914', border: `1px solid ${BORDER}`, borderRadius: '8px', padding: '10px 18px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
                 Cancel
               </button>
             </div>
           </div>
         )}
 
-        {/* Unassigned / General */}
         <ProjectGroup projectId={null} label="General" />
-
-        {/* Per-Job Groups */}
-        {projects.map(p => (
-          <ProjectGroup key={p.id} projectId={p.id} label={p.name} />
-        ))}
-
+        {projects.map(p => <ProjectGroup key={p.id} projectId={p.id} label={p.name} />)}
       </div>
     </div>
   )
