@@ -12,29 +12,12 @@ interface Todo {
   project_id?: string
   assigned_to?: string
   created_at: string
-  assigned?: {
-    full_name: string
-    email: string
-  }
+  assigned?: { full_name: string; email: string }
 }
 
-interface Project {
-  id: string
-  name: string
-}
-
-interface TeamMember {
-  id: string
-  full_name: string
-  email: string
-}
-
-interface Profile {
-  id: string
-  full_name: string
-  email: string
-  role: string
-}
+interface Project { id: string; name: string }
+interface TeamMember { id: string; full_name: string; email: string }
+interface Profile { id: string; full_name: string; email: string; role: string }
 
 interface Props {
   todos: Todo[]
@@ -43,14 +26,21 @@ interface Props {
   profile: Profile
 }
 
+const GOLD = '#C9A84C'
+const GOLD_LIGHT = '#F5E6C0'
+const GOLD_DARK = '#A07830'
+const BG = '#FAF3E0'
+const CARD = '#FFF8E7'
+const BORDER = '#E8D5A3'
+
 export default function TodosClient({ todos: initialTodos, projects, team, profile }: Props) {
   const supabase = createClient()
   const [todos, setTodos] = useState<Todo[]>(initialTodos)
   const [loading, setLoading] = useState(false)
+  const [selectedProject, setSelectedProject] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
-  const [filterStatus, setFilterStatus] = useState<string>('all')
-  const [filterAssigned, setFilterAssigned] = useState<string>('all')
+  const [addingToProject, setAddingToProject] = useState<string | null>(null)
 
   const [form, setForm] = useState({
     title: '',
@@ -65,6 +55,14 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
     setForm({ title: '', description: '', status: 'pending', priority: 'medium', project_id: '', assigned_to: '' })
     setEditingTodo(null)
     setShowForm(false)
+    setAddingToProject(null)
+  }
+
+  const openAddForProject = (projectId: string) => {
+    resetForm()
+    setForm(f => ({ ...f, project_id: projectId }))
+    setAddingToProject(projectId)
+    setShowForm(true)
   }
 
   const openEdit = (todo: Todo) => {
@@ -77,6 +75,7 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
       project_id: todo.project_id ?? '',
       assigned_to: todo.assigned_to ?? '',
     })
+    setAddingToProject(todo.project_id ?? null)
     setShowForm(true)
   }
 
@@ -98,10 +97,7 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
         .eq('id', editingTodo.id)
         .select('*, assigned:profiles(full_name, email)')
         .single()
-
-      if (!error && data) {
-        setTodos(prev => prev.map(t => t.id === editingTodo.id ? data : t))
-      }
+      if (!error && data) setTodos(prev => prev.map(t => t.id === editingTodo.id ? data : t))
     } else {
       const { data, error } = await supabase
         .from('todos')
@@ -116,10 +112,7 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
         })
         .select('*, assigned:profiles(full_name, email)')
         .single()
-
-      if (!error && data) {
-        setTodos(prev => [data, ...prev])
-      }
+      if (!error && data) setTodos(prev => [data, ...prev])
     }
 
     setLoading(false)
@@ -132,183 +125,290 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
     setTodos(prev => prev.filter(t => t.id !== id))
   }
 
-  const handleStatusToggle = async (todo: Todo) => {
-    const next = todo.status === 'done' ? 'pending' : todo.status === 'pending' ? 'in_progress' : 'done'
+  const handleToggleDone = async (todo: Todo) => {
+    const next = todo.status === 'done' ? 'pending' : 'done'
     const { data, error } = await supabase
       .from('todos')
       .update({ status: next })
       .eq('id', todo.id)
       .select('*, assigned:profiles(full_name, email)')
       .single()
-
-    if (!error && data) {
-      setTodos(prev => prev.map(t => t.id === todo.id ? data : t))
-    }
+    if (!error && data) setTodos(prev => prev.map(t => t.id === todo.id ? data : t))
   }
 
-  const filteredTodos = todos.filter(t => {
-    const statusMatch = filterStatus === 'all' || t.status === filterStatus
-    const assignedMatch = filterAssigned === 'all' || t.assigned_to === filterAssigned
-    return statusMatch && assignedMatch
+  const priorityColor = (p: string) => p === 'high' ? '#ef4444' : p === 'medium' ? GOLD : '#9ca3af'
+
+  // Group todos by project
+  const todosByProject: Record<string, Todo[]> = {}
+  const unassignedTodos: Todo[] = []
+
+  todos.forEach(t => {
+    if (t.project_id) {
+      if (!todosByProject[t.project_id]) todosByProject[t.project_id] = []
+      todosByProject[t.project_id].push(t)
+    } else {
+      unassignedTodos.push(t)
+    }
   })
 
-  const priorityColor = (p: string) => {
-    if (p === 'high') return '#ef4444'
-    if (p === 'medium') return '#f59e0b'
-    return '#6b7280'
+  const totalDone = todos.filter(t => t.status === 'done').length
+
+  const TodoRow = ({ todo }: { todo: Todo }) => {
+    const isDone = todo.status === 'done'
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', gap: '12px',
+        padding: '10px 0',
+        borderBottom: `1px solid ${BORDER}`,
+      }}>
+        {/* Circle */}
+        <button
+          onClick={() => handleToggleDone(todo)}
+          style={{
+            width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0, marginTop: '1px',
+            border: `2px solid ${isDone ? GOLD_DARK : GOLD}`,
+            background: isDone ? GOLD_DARK : 'transparent',
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.15s',
+          }}
+        >
+          {isDone && (
+            <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+              <path d="M1 4L4 7L10 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </button>
+
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{
+              fontSize: '15px', fontWeight: '500',
+              color: isDone ? '#A09070' : '#2C1A00',
+              textDecoration: isDone ? 'line-through' : 'none',
+            }}>
+              {todo.title}
+            </span>
+            <span style={{
+              width: '7px', height: '7px', borderRadius: '50%',
+              background: priorityColor(todo.priority),
+              flexShrink: 0, display: 'inline-block',
+            }} />
+            {todo.status === 'in_progress' && (
+              <span style={{ fontSize: '11px', background: '#dbeafe', color: '#1d4ed8', borderRadius: '4px', padding: '1px 6px', fontWeight: '600' }}>
+                In Progress
+              </span>
+            )}
+          </div>
+          {todo.description && (
+            <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#8B6914' }}>{todo.description}</p>
+          )}
+          {todo.assigned?.full_name && (
+            <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#A07830', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '11px' }}>👤</span> {todo.assigned.full_name}
+            </p>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+          <button onClick={() => openEdit(todo)} style={{
+            background: 'none', border: `1px solid ${BORDER}`, borderRadius: '5px',
+            padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: GOLD_DARK,
+          }}>Edit</button>
+          <button onClick={() => handleDelete(todo.id)} style={{
+            background: 'none', border: '1px solid #fecaca', borderRadius: '5px',
+            padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#dc2626',
+          }}>✕</button>
+        </div>
+      </div>
+    )
   }
 
-  const statusLabel = (s: string) => {
-    if (s === 'in_progress') return 'In Progress'
-    if (s === 'done') return 'Done'
-    return 'Pending'
-  }
+  const ProjectGroup = ({ projectId, label }: { projectId: string | null; label: string }) => {
+    const items = projectId ? (todosByProject[projectId] ?? []) : unassignedTodos
+    const done = items.filter(t => t.status === 'done').length
+    const isOpen = selectedProject === projectId || projectId === null
 
-  const statusColor = (s: string) => {
-    if (s === 'done') return '#10b981'
-    if (s === 'in_progress') return '#3b82f6'
-    return '#9ca3af'
+    return (
+      <div style={{ marginBottom: '16px', background: CARD, borderRadius: '14px', border: `1px solid ${BORDER}`, overflow: 'hidden' }}>
+        {/* Group Header */}
+        <div
+          onClick={() => projectId && setSelectedProject(isOpen ? null : projectId)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '14px 16px',
+            cursor: projectId ? 'pointer' : 'default',
+            borderBottom: isOpen ? `1px solid ${BORDER}` : 'none',
+            background: GOLD_LIGHT,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '28px', height: '28px', borderRadius: '8px',
+              background: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span style={{ fontSize: '14px' }}>{projectId ? '📋' : '📌'}</span>
+            </div>
+            <div>
+              <p style={{ margin: 0, fontWeight: '700', fontSize: '15px', color: '#2C1A00' }}>{label}</p>
+              <p style={{ margin: 0, fontSize: '12px', color: '#8B6914' }}>{done}/{items.length} completed</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{
+              background: GOLD, color: '#fff', borderRadius: '12px',
+              padding: '2px 10px', fontSize: '13px', fontWeight: '700', minWidth: '28px', textAlign: 'center',
+            }}>
+              {items.length - done}
+            </span>
+            {projectId && (
+              <span style={{ color: GOLD_DARK, fontSize: '18px', fontWeight: '300' }}>{isOpen ? '⌃' : '⌄'}</span>
+            )}
+          </div>
+        </div>
+
+        {/* Todo Rows */}
+        {isOpen && (
+          <div style={{ padding: '0 16px' }}>
+            {items.length === 0 && (
+              <p style={{ padding: '14px 0', color: '#B8A070', fontSize: '14px', margin: 0 }}>No tasks yet.</p>
+            )}
+            {items.map(todo => <TodoRow key={todo.id} todo={todo} />)}
+
+            {/* Inline Add Button */}
+            <div
+              onClick={() => openAddForProject(projectId ?? '')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '10px 0', cursor: 'pointer', color: GOLD_DARK,
+                fontSize: '14px', fontWeight: '500',
+              }}
+            >
+              <div style={{
+                width: '22px', height: '22px', borderRadius: '50%',
+                border: `2px dashed ${GOLD}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: GOLD, fontSize: '16px', lineHeight: 1,
+              }}>+</div>
+              Add task
+            </div>
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
-    <div style={{ padding: '32px', maxWidth: '900px', margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Team To-Do</h1>
-          <p style={{ color: '#6b7280', margin: '4px 0 0', fontSize: '14px' }}>{filteredTodos.length} task{filteredTodos.length !== 1 ? 's' : ''}</p>
+    <div style={{ minHeight: '100vh', background: BG, padding: '32px 24px' }}>
+      <div style={{ maxWidth: '680px', margin: '0 auto' }}>
+
+        {/* Header */}
+        <div style={{ marginBottom: '28px' }}>
+          <h1 style={{ fontSize: '32px', fontWeight: '800', color: '#2C1A00', margin: '0 0 4px' }}>Team To-Do</h1>
+          <p style={{ color: '#8B6914', margin: 0, fontSize: '14px' }}>
+            {totalDone} of {todos.length} tasks completed
+          </p>
         </div>
+
+        {/* Global Add Task Button */}
         <button
           onClick={() => { resetForm(); setShowForm(true) }}
-          style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            background: GOLD, color: '#fff', border: 'none', borderRadius: '12px',
+            padding: '12px 20px', fontWeight: '700', cursor: 'pointer', fontSize: '15px',
+            marginBottom: '24px', boxShadow: `0 2px 8px ${GOLD}55`,
+          }}
         >
-          + New Task
+          <span style={{ fontSize: '20px', lineHeight: 1 }}>+</span> New Task
         </button>
-      </div>
 
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '14px', background: '#fff' }}>
-          <option value="all">All Statuses</option>
-          <option value="pending">Pending</option>
-          <option value="in_progress">In Progress</option>
-          <option value="done">Done</option>
-        </select>
-        <select value={filterAssigned} onChange={e => setFilterAssigned(e.target.value)}
-          style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '14px', background: '#fff' }}>
-          <option value="all">All Team Members</option>
-          {team.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
-        </select>
-      </div>
-
-      {/* Add/Edit Form */}
-      {showForm && (
-        <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>{editingTodo ? 'Edit Task' : 'New Task'}</h2>
-          <div style={{ display: 'grid', gap: '12px' }}>
-            <input
-              placeholder="Task title *"
-              value={form.title}
-              onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-              style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '14px' }}
-            />
-            <textarea
-              placeholder="Description (optional)"
-              value={form.description}
-              onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-              rows={2}
-              style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '14px', resize: 'vertical' }}
-            />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as Todo['status'] }))}
-                style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '14px' }}>
-                <option value="pending">Pending</option>
-                <option value="in_progress">In Progress</option>
-                <option value="done">Done</option>
-              </select>
-              <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as Todo['priority'] }))}
-                style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '14px' }}>
-                <option value="low">Low Priority</option>
-                <option value="medium">Medium Priority</option>
-                <option value="high">High Priority</option>
-              </select>
-              <select value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}
-                style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '14px' }}>
-                <option value="">No Project</option>
-                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-              <select value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))}
-                style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '14px' }}>
-                <option value="">Unassigned</option>
-                {team.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
-              </select>
+        {/* Add/Edit Form Modal */}
+        {showForm && (
+          <div style={{
+            background: CARD, border: `1px solid ${BORDER}`, borderRadius: '16px',
+            padding: '20px', marginBottom: '24px',
+            boxShadow: `0 4px 24px ${GOLD}33`,
+          }}>
+            <h2 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: '700', color: '#2C1A00' }}>
+              {editingTodo ? 'Edit Task' : 'New Task'}
+            </h2>
+            <div style={{ display: 'grid', gap: '10px' }}>
+              <input
+                placeholder="Task title *"
+                value={form.title}
+                onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                autoFocus
+                style={{
+                  padding: '10px 14px', borderRadius: '8px',
+                  border: `1.5px solid ${BORDER}`, fontSize: '15px',
+                  background: BG, color: '#2C1A00',
+                  outline: 'none',
+                }}
+              />
+              <textarea
+                placeholder="Notes (optional)"
+                value={form.description}
+                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                rows={2}
+                style={{
+                  padding: '10px 14px', borderRadius: '8px',
+                  border: `1.5px solid ${BORDER}`, fontSize: '14px',
+                  background: BG, color: '#2C1A00', resize: 'vertical',
+                }}
+              />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as Todo['priority'] }))}
+                  style={{ padding: '10px 12px', borderRadius: '8px', border: `1.5px solid ${BORDER}`, fontSize: '14px', background: BG, color: '#2C1A00' }}>
+                  <option value="low">🟢 Low</option>
+                  <option value="medium">🟡 Medium</option>
+                  <option value="high">🔴 High</option>
+                </select>
+                <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as Todo['status'] }))}
+                  style={{ padding: '10px 12px', borderRadius: '8px', border: `1.5px solid ${BORDER}`, fontSize: '14px', background: BG, color: '#2C1A00' }}>
+                  <option value="pending">Pending</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="done">Done</option>
+                </select>
+                <select value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}
+                  style={{ padding: '10px 12px', borderRadius: '8px', border: `1.5px solid ${BORDER}`, fontSize: '14px', background: BG, color: '#2C1A00' }}>
+                  <option value="">📌 No Job</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>📋 {p.name}</option>)}
+                </select>
+                <select value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))}
+                  style={{ padding: '10px 12px', borderRadius: '8px', border: `1.5px solid ${BORDER}`, fontSize: '14px', background: BG, color: '#2C1A00' }}>
+                  <option value="">👤 Unassigned</option>
+                  {team.map(m => <option key={m.id} value={m.id}>👤 {m.full_name}</option>)}
+                </select>
+              </div>
             </div>
-          </div>
-          <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-            <button onClick={handleSubmit} disabled={loading}
-              style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', padding: '10px 20px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
-              {loading ? 'Saving...' : editingTodo ? 'Save Changes' : 'Add Task'}
-            </button>
-            <button onClick={resetForm}
-              style={{ background: '#fff', color: '#374151', border: '1px solid #d1d5db', borderRadius: '6px', padding: '10px 20px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Todo List */}
-      <div style={{ display: 'grid', gap: '10px' }}>
-        {filteredTodos.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '48px', color: '#9ca3af', fontSize: '15px' }}>
-            No tasks found. Click &quot;+ New Task&quot; to get started.
+            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+              <button onClick={handleSubmit} disabled={loading} style={{
+                background: GOLD, color: '#fff', border: 'none', borderRadius: '8px',
+                padding: '10px 22px', fontWeight: '700', cursor: 'pointer', fontSize: '14px',
+              }}>
+                {loading ? 'Saving...' : editingTodo ? 'Save Changes' : 'Add Task'}
+              </button>
+              <button onClick={resetForm} style={{
+                background: 'none', color: '#8B6914', border: `1px solid ${BORDER}`,
+                borderRadius: '8px', padding: '10px 18px', fontWeight: '600', cursor: 'pointer', fontSize: '14px',
+              }}>
+                Cancel
+              </button>
+            </div>
           </div>
         )}
-        {filteredTodos.map(todo => (
-          <div key={todo.id} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '16px 20px', display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-            {/* Status toggle button */}
-            <button onClick={() => handleStatusToggle(todo)}
-              title="Cycle status"
-              style={{ width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${statusColor(todo.status)}`, background: todo.status === 'done' ? statusColor(todo.status) : 'transparent', cursor: 'pointer', flexShrink: 0, marginTop: '2px' }} />
 
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ fontWeight: '600', fontSize: '15px', textDecoration: todo.status === 'done' ? 'line-through' : 'none', color: todo.status === 'done' ? '#9ca3af' : '#111827' }}>
-                  {todo.title}
-                </span>
-                <span style={{ fontSize: '11px', fontWeight: '600', color: priorityColor(todo.priority), textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {todo.priority}
-                </span>
-                <span style={{ fontSize: '12px', color: statusColor(todo.status), fontWeight: '500' }}>
-                  {statusLabel(todo.status)}
-                </span>
-              </div>
-              {todo.description && (
-                <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#6b7280' }}>{todo.description}</p>
-              )}
-              <div style={{ display: 'flex', gap: '12px', marginTop: '6px', flexWrap: 'wrap' }}>
-                {todo.assigned?.full_name && (
-                  <span style={{ fontSize: '12px', color: '#6b7280' }}>👤 {todo.assigned.full_name}</span>
-                )}
-                {todo.project_id && (
-                  <span style={{ fontSize: '12px', color: '#6b7280' }}>📁 {projects.find(p => p.id === todo.project_id)?.name}</span>
-                )}
-              </div>
-            </div>
+        {/* Unassigned / General */}
+        <ProjectGroup projectId={null} label="General" />
 
-            <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-              <button onClick={() => openEdit(todo)}
-                style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '4px 10px', fontSize: '12px', cursor: 'pointer', color: '#374151' }}>
-                Edit
-              </button>
-              <button onClick={() => handleDelete(todo.id)}
-                style={{ background: 'none', border: '1px solid #fee2e2', borderRadius: '6px', padding: '4px 10px', fontSize: '12px', cursor: 'pointer', color: '#ef4444' }}>
-                Delete
-              </button>
-            </div>
-          </div>
+        {/* Per-Job Groups */}
+        {projects.map(p => (
+          <ProjectGroup key={p.id} projectId={p.id} label={p.name} />
         ))}
+
       </div>
     </div>
   )
