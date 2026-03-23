@@ -160,7 +160,7 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
   const TodoRow = ({ todo }: { todo: Todo }) => {
     const isDone = todo.status === 'done'
     return (
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '10px 0', borderBottom: 1px solid  }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '10px 0', borderBottom: `1px solid ${BORDER}` }}>
         <button
           onClick={() => handleToggleDone(todo)}
           style={{
@@ -211,7 +211,7 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '14px 16px', cursor: projectId ? 'pointer' : 'default',
-            borderBottom: isOpen ? 1px solid  : 'none',
+            borderBottom: isOpen ? `1px solid ${BORDER}` : 'none',
             background: GOLD_LIGHT,
           }}
         >
@@ -333,3 +333,5 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
     </div>
   )
 }
+
+
