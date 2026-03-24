@@ -7,20 +7,18 @@ import AdminProjectTabs from '@/components/admin/AdminProjectTabs'
 
 export default async function AdminProjectPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
-
-  const { data: project } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('id', params.id)
-    .single()
-
+  const { data: project } = await supabase.from('projects').select('*').eq('id', params.id).single()
   if (!project) notFound()
 
-  const [phasesRes, selectionsRes, documentsRes, announcementsRes] = await Promise.all([
+  const [phasesRes, selectionsRes, documentsRes, todosRes, logsRes, messagesRes, teamRes, subsRes] = await Promise.all([
     supabase.from('project_phases').select('*, tasks(*)').eq('project_id', params.id).order('sort_order'),
     supabase.from('selections').select('*').eq('project_id', params.id).order('sort_order'),
     supabase.from('documents').select('*').eq('project_id', params.id).order('created_at', { ascending: false }),
-    supabase.from('announcements').select('*').eq('project_id', params.id).order('created_at', { ascending: false }),
+    supabase.from('todos').select('*, assigned:profiles!todos_assigned_to_fkey(full_name, email), sub:subcontractors(id, name, trade)').eq('project_id', params.id).order('created_at', { ascending: false }),
+    supabase.from('daily_logs').select('*').eq('project_id', params.id).order('log_date', { ascending: false }),
+    supabase.from('messages').select('*, sender:profiles(full_name, role)').eq('project_id', params.id).order('created_at', { ascending: true }),
+    supabase.from('profiles').select('id, full_name, email').eq('role', 'admin'),
+    supabase.from('subcontractors').select('id, name, trade').order('trade'),
   ])
 
   const card = { background: '#111111', border: '1px solid rgba(184,151,106,0.12)', borderRadius: '8px' }
@@ -61,7 +59,11 @@ export default async function AdminProjectPage({ params }: { params: { id: strin
         phases={phasesRes.data ?? []}
         selections={selectionsRes.data ?? []}
         documents={documentsRes.data ?? []}
-        announcements={announcementsRes.data ?? []}
+        todos={todosRes.data ?? []}
+        dailyLogs={logsRes.data ?? []}
+        messages={messagesRes.data ?? []}
+        team={teamRes.data ?? []}
+        subcontractors={subsRes.data ?? []}
       />
     </div>
   )
