@@ -176,39 +176,12 @@ const handleSendMessage = async () => {
         ))}
       </div>
 
-      {/* SCHEDULE */}
-      {tab === 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {phases.length === 0 && <p style={{ fontSize: '13px', color: MUTED }}>No phases yet.</p>}
-          {phases.map((phase: any) => (
-            <div key={phase.id} style={{ background: CARD, border: `1px solid ${GOLD_LIGHT}`, borderRadius: '10px', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: `1px solid ${GOLD_LIGHT}`, background: 'rgba(184,151,106,0.05)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <StatusBadge status={phase.status} />
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: TEXT }}>{phase.name}</span>
-                </div>
-                <span style={{ fontSize: '12px', color: MUTED }}>{formatDate(phase.start_date)} — {formatDate(phase.end_date)}</span>
-              </div>
-              {(phase.tasks ?? []).length === 0
-                ? <p style={{ padding: '12px 20px', fontSize: '13px', color: MUTED }}>No tasks.</p>
-                : (phase.tasks ?? []).sort((a: any, b: any) => a.sort_order - b.sort_order).map((task: any) => (
-                  <div key={task.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px', borderBottom: `1px solid ${GOLD_LIGHT}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '16px', height: '16px', borderRadius: '4px', border: `1px solid ${task.is_completed ? GOLD : BORDER}`, background: task.is_completed ? GOLD : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {task.is_completed && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#0a0a0a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                      </div>
-                      <span style={{ fontSize: '13px', color: task.is_completed ? MUTED : TEXT, textDecoration: task.is_completed ? 'line-through' : 'none' }}>{task.name}</span>
-                    </div>
-                    <span style={{ fontSize: '12px', color: MUTED, fontFamily: 'monospace' }}>{formatDate(task.due_date)}</span>
-                  </div>
-                ))
-              }
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* TO-DOS */}
+{/* SCHEDULE */}
+{tab === 0 && (
+  <div>
+    <ScheduleCalendar phases={phases} />
+  </div>
+)}
       {tab === 1 && (
         <div>
           {/* Column headers */}
@@ -398,6 +371,129 @@ const handleSendMessage = async () => {
             {messages.length === 0 && <p style={{ fontSize: '13px', color: MUTED, textAlign: 'center', margin: 'auto' }}>No messages yet. Start the conversation.</p>}
            {messages.map(msg => {
   const isAdmin = msg.sender_role === 'admin'
+const ScheduleCalendar = ({ phases }: { phases: any[] }) => {
+  const today = new Date()
+  const [currentMonth, setCurrentMonth] = useState(today.getMonth())
+  const [currentYear, setCurrentYear] = useState(today.getFullYear())
+
+  const PHASE_COLORS = [
+    { bg: '#b8976a', light: 'rgba(184,151,106,0.15)', text: '#0a0a0a' },
+    { bg: '#6a8fb8', light: 'rgba(106,143,184,0.15)', text: '#0a0a0a' },
+    { bg: '#6ab87a', light: 'rgba(106,184,122,0.15)', text: '#0a0a0a' },
+    { bg: '#b86a6a', light: 'rgba(184,106,106,0.15)', text: '#0a0a0a' },
+    { bg: '#9b6ab8', light: 'rgba(155,106,184,0.15)', text: '#0a0a0a' },
+    { bg: '#b8a96a', light: 'rgba(184,169,106,0.15)', text: '#0a0a0a' },
+  ]
+
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
+  const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay()
+  const monthName = new Date(currentYear, currentMonth, 1).toLocaleString('default', { month: 'long' })
+
+  const prevMonth = () => {
+    if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear(y => y - 1) }
+    else setCurrentMonth(m => m - 1)
+  }
+  const nextMonth = () => {
+    if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear(y => y + 1) }
+    else setCurrentMonth(m => m + 1)
+  }
+
+  const getPhasesForDay = (day: number) => {
+    const date = new Date(currentYear, currentMonth, day)
+    return phases.map((phase, idx) => {
+      if (!phase.start_date || !phase.end_date) return null
+      const start = new Date(phase.start_date)
+      const end = new Date(phase.end_date)
+      start.setHours(0, 0, 0, 0)
+      end.setHours(23, 59, 59, 999)
+      date.setHours(12, 0, 0, 0)
+      if (date >= start && date <= end) {
+        const isStart = date.toDateString() === start.toDateString()
+        const isEnd = date.toDateString() === end.toDateString()
+        return { phase, color: PHASE_COLORS[idx % PHASE_COLORS.length], isStart, isEnd }
+      }
+      return null
+    }).filter(Boolean)
+  }
+
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
+  const blanks = Array.from({ length: firstDayOfMonth }, (_, i) => i)
+
+  return (
+    <div>
+      {/* Phase Legend */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
+        {phases.map((phase, idx) => (
+          <div key={phase.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px', background: PHASE_COLORS[idx % PHASE_COLORS.length].light, border: `1px solid ${PHASE_COLORS[idx % PHASE_COLORS.length].bg}33` }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: PHASE_COLORS[idx % PHASE_COLORS.length].bg, flexShrink: 0 }} />
+            <span style={{ fontSize: '12px', color: TEXT, fontWeight: 500 }}>{phase.name}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar header */}
+      <div style={{ background: CARD, border: `1px solid ${GOLD_LIGHT}`, borderRadius: '12px', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: `1px solid ${GOLD_LIGHT}` }}>
+          <button onClick={prevMonth} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: '6px', padding: '6px 12px', color: MUTED, cursor: 'pointer', fontSize: '14px' }}>←</button>
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: TEXT, fontWeight: 400 }}>{monthName}</p>
+            <p style={{ fontSize: '12px', color: MUTED }}>{currentYear}</p>
+          </div>
+          <button onClick={nextMonth} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: '6px', padding: '6px 12px', color: MUTED, cursor: 'pointer', fontSize: '14px' }}>→</button>
+        </div>
+
+        {/* Day headers */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: `1px solid ${GOLD_LIGHT}` }}>
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+            <div key={d} style={{ padding: '8px 0', textAlign: 'center' }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{d}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+          {blanks.map(b => (
+            <div key={`blank-${b}`} style={{ minHeight: '80px', borderRight: `1px solid ${GOLD_LIGHT}`, borderBottom: `1px solid ${GOLD_LIGHT}`, background: 'rgba(0,0,0,0.2)' }} />
+          ))}
+          {days.map(day => {
+            const isToday = today.getDate() === day && today.getMonth() === currentMonth && today.getFullYear() === currentYear
+            const phasesForDay = getPhasesForDay(day)
+            return (
+              <div key={day} style={{ minHeight: '80px', borderRight: `1px solid ${GOLD_LIGHT}`, borderBottom: `1px solid ${GOLD_LIGHT}`, padding: '6px', position: 'relative', background: isToday ? 'rgba(184,151,106,0.05)' : 'transparent' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: isToday ? 700 : 400, color: isToday ? GOLD : MUTED, width: '24px', height: '24px', borderRadius: '50%', background: isToday ? 'rgba(184,151,106,0.15)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {day}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  {(phasesForDay as any[]).map((p: any, i: number) => (
+                    <div key={i} style={{ background: p.color.bg, borderRadius: p.isStart && p.isEnd ? '4px' : p.isStart ? '4px 0 0 4px' : p.isEnd ? '0 4px 4px 0' : '0', padding: '1px 4px', fontSize: '9px', fontWeight: 600, color: p.color.text, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                      {p.isStart ? p.phase.name : '\u00A0'}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Phase list below calendar */}
+      <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {phases.map((phase, idx) => (
+          <div key={phase.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: CARD, border: `1px solid ${GOLD_LIGHT}`, borderRadius: '8px', borderLeft: `3px solid ${PHASE_COLORS[idx % PHASE_COLORS.length].bg}` }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: '13px', fontWeight: 600, color: TEXT, marginBottom: '2px' }}>{phase.name}</p>
+              <p style={{ fontSize: '11px', color: MUTED }}>{formatDate(phase.start_date)} — {formatDate(phase.end_date)}</p>
+            </div>
+            <StatusBadge status={phase.status} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
   return (
     <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isAdmin ? 'flex-end' : 'flex-start' }}>
       <div style={{ background: isAdmin ? GOLD : '#1a1a1a', borderRadius: isAdmin ? '12px 12px 2px 12px' : '12px 12px 12px 2px', padding: '10px 14px', maxWidth: '70%', border: isAdmin ? 'none' : `1px solid ${GOLD_LIGHT}` }}>
