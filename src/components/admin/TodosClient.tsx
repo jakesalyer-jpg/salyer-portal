@@ -37,10 +37,11 @@ const BG = '#FAF3E0'
 const CARD = '#FFF8E7'
 const BORDER = '#E8D5A3'
 
-export default function TodosClient({ todos: initialTodos, projects, team, profile, subcontractors }: Props) {
+export default function TodosClient({ todos: initialTodos, projects, team, profile, subcontractors: initialSubs }: Props) {
   const supabase = createClient()
-  const [tab, setTab] = useState<'todos' | 'templates'>('todos')
+  const [tab, setTab] = useState<'todos' | 'templates' | 'subs'>('todos')
   const [todos, setTodos] = useState<Todo[]>(initialTodos)
+  const [subs, setSubs] = useState<Subcontractor[]>(initialSubs)
   const [loading, setLoading] = useState(false)
   const [openProject, setOpenProject] = useState<string | null>(null)
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
@@ -61,6 +62,12 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
   const [newItem, setNewItem] = useState('')
   const [newItemPhase, setNewItemPhase] = useState('')
   const [applyingTo, setApplyingTo] = useState<string | null>(null)
+
+  const [newSubName, setNewSubName] = useState('')
+  const [newSubTrade, setNewSubTrade] = useState('')
+  const [editingSubId, setEditingSubId] = useState<string | null>(null)
+  const [editSubName, setEditSubName] = useState('')
+  const [editSubTrade, setEditSubTrade] = useState('')
 
   useEffect(() => { if (tab === 'templates') loadTemplates() }, [tab])
 
@@ -207,11 +214,33 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
     }))
   }
 
+  const addSub = async () => {
+    if (!newSubName.trim() || !newSubTrade.trim()) return
+    setLoading(true)
+    const { data, error } = await supabase.from('subcontractors').insert({ name: newSubName.trim(), trade: newSubTrade.trim() }).select().single()
+    if (!error && data) { setSubs(prev => [...prev, data]); setNewSubName(''); setNewSubTrade('') }
+    setLoading(false)
+  }
+
+  const saveSub = async (id: string) => {
+    if (!editSubName.trim() || !editSubTrade.trim()) return
+    setLoading(true)
+    const { data, error } = await supabase.from('subcontractors').update({ name: editSubName.trim(), trade: editSubTrade.trim() }).eq('id', id).select().single()
+    if (!error && data) { setSubs(prev => prev.map(s => s.id === id ? data : s)); setEditingSubId(null) }
+    setLoading(false)
+  }
+
+  const deleteSub = async (id: string) => {
+    if (!confirm('Remove this subcontractor?')) return
+    await supabase.from('subcontractors').delete().eq('id', id)
+    setSubs(prev => prev.filter(s => s.id !== id))
+  }
+
   const SubSelect = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
     <select value={value} onChange={e => onChange(e.target.value)}
       style={{ padding: '7px 10px', borderRadius: '7px', border: `1px solid ${BORDER}`, fontSize: '13px', background: BG, color: '#2C1A00' }}>
       <option value="">No Sub</option>
-      {subcontractors.map(s => <option key={s.id} value={s.id}>{s.trade} — {s.name}</option>)}
+      {subs.map(s => <option key={s.id} value={s.id}>{s.trade} — {s.name}</option>)}
     </select>
   )
 
@@ -259,14 +288,12 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
         <button onClick={() => handleToggleDone(todo)} style={{ width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0, border: `2px solid ${isDone ? GOLD_DARK : GOLD}`, background: isDone ? GOLD_DARK : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {isDone && <svg width="11" height="9" viewBox="0 0 11 9" fill="none"><path d="M1 4L4 7L10 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
         </button>
-
         <div style={{ width: '150px', flexShrink: 0 }}>
           {todo.sub
             ? <span style={{ fontSize: '12px', fontWeight: '600', color: GOLD_DARK, background: GOLD_LIGHT, borderRadius: '6px', padding: '2px 8px', display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{todo.sub.name}</span>
             : <span style={{ fontSize: '12px', color: '#C0A870', fontStyle: 'italic' }}>No sub</span>
           }
         </div>
-
         <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => openEdit(todo)}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '14px', fontWeight: '500', color: isDone ? '#A09070' : '#2C1A00', textDecoration: isDone ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{todo.title}</span>
@@ -274,7 +301,6 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
             {todo.status === 'in_progress' && <span style={{ fontSize: '10px', background: '#dbeafe', color: '#1d4ed8', borderRadius: '4px', padding: '1px 5px', fontWeight: '600', flexShrink: 0 }}>In Progress</span>}
           </div>
         </div>
-
         <div style={{ width: '140px', flexShrink: 0, textAlign: 'right' }}>
           {teamMember
             ? <span style={{ fontSize: '12px', fontWeight: '600', color: '#2C1A00', background: BORDER, borderRadius: '6px', padding: '2px 8px', display: 'inline-block' }}>{teamMember.full_name}</span>
@@ -297,7 +323,7 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
         <select value={inlineSub} onChange={e => setInlineSub(e.target.value)}
           style={{ padding: '6px 10px', borderRadius: '7px', border: `1px solid ${BORDER}`, fontSize: '13px', background: BG, color: '#2C1A00' }}>
           <option value="">No Sub</option>
-          {subcontractors.map(s => <option key={s.id} value={s.id}>{s.trade} — {s.name}</option>)}
+          {subs.map(s => <option key={s.id} value={s.id}>{s.trade} — {s.name}</option>)}
         </select>
         <select value={inlineAssigned} onChange={e => setInlineAssigned(e.target.value)}
           style={{ padding: '6px 10px', borderRadius: '7px', border: `1px solid ${BORDER}`, fontSize: '13px', background: BG, color: '#2C1A00' }}>
@@ -374,6 +400,7 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
           <div style={{ display: 'flex', gap: '4px', background: GOLD_LIGHT, borderRadius: '10px', padding: '4px', width: 'fit-content' }}>
             <button onClick={() => setTab('todos')} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', fontWeight: '700', fontSize: '14px', cursor: 'pointer', background: tab === 'todos' ? GOLD : 'transparent', color: tab === 'todos' ? '#fff' : GOLD_DARK }}>Todos</button>
             <button onClick={() => setTab('templates')} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', fontWeight: '700', fontSize: '14px', cursor: 'pointer', background: tab === 'templates' ? GOLD : 'transparent', color: tab === 'templates' ? '#fff' : GOLD_DARK }}>Templates</button>
+            <button onClick={() => setTab('subs')} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', fontWeight: '700', fontSize: '14px', cursor: 'pointer', background: tab === 'subs' ? GOLD : 'transparent', color: tab === 'subs' ? '#fff' : GOLD_DARK }}>Subcontractors</button>
           </div>
         </div>
 
@@ -465,6 +492,59 @@ export default function TodosClient({ todos: initialTodos, projects, team, profi
             })}
           </div>
         )}
+
+        {tab === 'subs' && (
+          <div>
+            <p style={{ color: '#8B6914', margin: '0 0 20px', fontSize: '14px' }}>Manage your subcontractor list. These appear as options when assigning tasks.</p>
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+              <p style={{ margin: '0 0 10px', fontWeight: '700', color: '#2C1A00', fontSize: '14px' }}>Add Subcontractor</p>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <input placeholder="Trade (e.g. Electrical)" value={newSubTrade} onChange={e => setNewSubTrade(e.target.value)}
+                  style={{ flex: 1, minWidth: '140px', padding: '8px 12px', borderRadius: '7px', border: `1.5px solid ${BORDER}`, fontSize: '14px', background: BG, color: '#2C1A00' }} />
+                <input placeholder="Name (e.g. Mike West)" value={newSubName} onChange={e => setNewSubName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addSub()}
+                  style={{ flex: 1, minWidth: '140px', padding: '8px 12px', borderRadius: '7px', border: `1.5px solid ${BORDER}`, fontSize: '14px', background: BG, color: '#2C1A00' }} />
+                <button onClick={addSub} disabled={loading} style={{ background: GOLD, color: '#fff', border: 'none', borderRadius: '7px', padding: '8px 18px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>
+                  {loading ? 'Adding...' : 'Add'}
+                </button>
+              </div>
+            </div>
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: '14px', overflow: 'hidden' }}>
+              <div style={{ background: GOLD_LIGHT, padding: '12px 16px', display: 'flex', gap: '10px' }}>
+                <span style={{ flex: 1, fontSize: '11px', fontWeight: '700', color: '#A07830', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trade</span>
+                <span style={{ flex: 1, fontSize: '11px', fontWeight: '700', color: '#A07830', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Name</span>
+                <span style={{ width: '160px', flexShrink: 0 }} />
+              </div>
+              {[...subs].sort((a, b) => a.trade.localeCompare(b.trade)).map(sub => (
+                <div key={sub.id} style={{ padding: '0 16px', borderBottom: `1px solid ${BORDER}` }}>
+                  {editingSubId === sub.id ? (
+                    <div style={{ display: 'flex', gap: '8px', padding: '10px 0', flexWrap: 'wrap' }}>
+                      <input value={editSubTrade} onChange={e => setEditSubTrade(e.target.value)}
+                        style={{ flex: 1, minWidth: '120px', padding: '7px 10px', borderRadius: '7px', border: `1.5px solid ${GOLD}`, fontSize: '14px', background: BG, color: '#2C1A00' }} />
+                      <input value={editSubName} onChange={e => setEditSubName(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && saveSub(sub.id)}
+                        style={{ flex: 1, minWidth: '120px', padding: '7px 10px', borderRadius: '7px', border: `1.5px solid ${GOLD}`, fontSize: '14px', background: BG, color: '#2C1A00' }} />
+                      <button onClick={() => saveSub(sub.id)} disabled={loading} style={{ background: GOLD, color: '#fff', border: 'none', borderRadius: '7px', padding: '7px 14px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>Save</button>
+                      <button onClick={() => setEditingSubId(null)} style={{ background: 'none', color: '#8B6914', border: `1px solid ${BORDER}`, borderRadius: '7px', padding: '7px 10px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 0' }}>
+                      <span style={{ flex: 1, fontSize: '14px', color: '#8B6914', fontWeight: '600' }}>{sub.trade}</span>
+                      <span style={{ flex: 1, fontSize: '14px', color: '#2C1A00' }}>{sub.name}</span>
+                      <div style={{ width: '160px', flexShrink: 0, display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                        <button onClick={() => { setEditingSubId(sub.id); setEditSubName(sub.name); setEditSubTrade(sub.trade) }}
+                          style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: '5px', padding: '3px 10px', fontSize: '12px', cursor: 'pointer', color: GOLD_DARK }}>Edit</button>
+                        <button onClick={() => deleteSub(sub.id)}
+                          style={{ background: 'none', border: '1px solid #fecaca', borderRadius: '5px', padding: '3px 10px', fontSize: '12px', cursor: 'pointer', color: '#dc2626' }}>Remove</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   )
