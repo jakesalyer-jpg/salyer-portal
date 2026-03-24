@@ -33,7 +33,8 @@ interface Message {
   id: string
   body: string
   created_at: string
-  sender?: { full_name: string; role: string }
+  sender_name: string
+  sender_role: string
 }
 
 interface TeamMember { id: string; full_name: string; email: string }
@@ -147,17 +148,18 @@ export default function AdminProjectTabs({ project, phases, selections, document
   }
 
   // Messaging handlers
-  const handleSendMessage = async () => {
-    if (!newMessage.trim()) return
-    setMsgLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data, error } = await supabase.from('messages')
-      .insert({ project_id: project.id, body: newMessage, sender_id: user?.id })
-      .select('*, sender:profiles(full_name, role)').single()
-    if (!error && data) setMessages(prev => [...prev, data])
-    setNewMessage('')
-    setMsgLoading(false)
-  }
+const handleSendMessage = async () => {
+  if (!newMessage.trim()) return
+  setMsgLoading(true)
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: senderProfile } = await supabase.from('profiles').select('full_name, role').eq('id', user!.id).single()
+  const { data, error } = await supabase.from('messages')
+    .insert({ project_id: project.id, body: newMessage, sender_id: user?.id, sender_name: senderProfile?.full_name ?? 'Admin', sender_role: 'admin' })
+    .select().single()
+  if (!error && data) setMessages(prev => [...prev, data])
+  setNewMessage('')
+  setMsgLoading(false)
+}
 
   const inputStyle = { padding: '8px 12px', borderRadius: '6px', border: `1px solid ${BORDER}`, fontSize: '13px', background: '#1a1a1a', color: TEXT, outline: 'none' }
   const btnStyle = { padding: '8px 16px', borderRadius: '6px', border: 'none', background: GOLD, color: '#0a0a0a', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }
@@ -394,21 +396,21 @@ export default function AdminProjectTabs({ project, phases, selections, document
         <div>
           <div style={{ background: CARD, border: `1px solid ${GOLD_LIGHT}`, borderRadius: '10px', padding: '16px', marginBottom: '12px', minHeight: '300px', maxHeight: '500px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {messages.length === 0 && <p style={{ fontSize: '13px', color: MUTED, textAlign: 'center', margin: 'auto' }}>No messages yet. Start the conversation.</p>}
-            {messages.map(msg => {
-              const isAdmin = msg.sender?.role === 'admin'
-              return (
-                <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isAdmin ? 'flex-end' : 'flex-start' }}>
-                  <div style={{ background: isAdmin ? GOLD : '#1a1a1a', borderRadius: isAdmin ? '12px 12px 2px 12px' : '12px 12px 12px 2px', padding: '10px 14px', maxWidth: '70%', border: isAdmin ? 'none' : `1px solid ${GOLD_LIGHT}` }}>
-                    <p style={{ fontSize: '13px', color: isAdmin ? '#0a0a0a' : TEXT, lineHeight: 1.5 }}>{msg.body}</p>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                    <span style={{ fontSize: '11px', color: MUTED }}>{msg.sender?.full_name}</span>
-                    <span style={{ fontSize: '11px', color: MUTED }}>·</span>
-                    <span style={{ fontSize: '11px', color: MUTED }}>{new Date(msg.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                  </div>
-                </div>
-              )
-            })}
+           {messages.map(msg => {
+  const isAdmin = msg.sender_role === 'admin'
+  return (
+    <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isAdmin ? 'flex-end' : 'flex-start' }}>
+      <div style={{ background: isAdmin ? GOLD : '#1a1a1a', borderRadius: isAdmin ? '12px 12px 2px 12px' : '12px 12px 12px 2px', padding: '10px 14px', maxWidth: '70%', border: isAdmin ? 'none' : `1px solid ${GOLD_LIGHT}` }}>
+        <p style={{ fontSize: '13px', color: isAdmin ? '#0a0a0a' : TEXT, lineHeight: 1.5 }}>{msg.body}</p>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+        <span style={{ fontSize: '11px', color: MUTED }}>{msg.sender_name}</span>
+        <span style={{ fontSize: '11px', color: MUTED }}>·</span>
+        <span style={{ fontSize: '11px', color: MUTED }}>{new Date(msg.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+      </div>
+    </div>
+  )
+})}
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <input value={newMessage} onChange={e => setNewMessage(e.target.value)}

@@ -16,7 +16,7 @@ export default async function AdminProjectPage({ params }: { params: { id: strin
     supabase.from('documents').select('*').eq('project_id', params.id).order('created_at', { ascending: false }),
     supabase.from('todos').select('*, assigned:profiles!todos_assigned_to_fkey(full_name, email), sub:subcontractors(id, name, trade)').eq('project_id', params.id).order('created_at', { ascending: false }),
     supabase.from('daily_logs').select('*').eq('project_id', params.id).order('log_date', { ascending: false }),
-    supabase.from('messages').select('*, sender:profiles(full_name, role)').eq('project_id', params.id).order('created_at', { ascending: true }),
+    supabase.from('messages').select('*').eq('project_id', params.id).order('created_at', { ascending: true }),
     supabase.from('profiles').select('id, full_name, email').eq('role', 'admin'),
     supabase.from('subcontractors').select('id, name, trade').order('trade'),
   ])
