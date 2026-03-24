@@ -95,10 +95,6 @@ export default function AdminProjectTabs({ project, phases, selections, document
   const [phaseEdits, setPhaseEdits] = useState<Record<string, { depends_on: string; lag_days: number }>>({})
   const [phaseLoading, setPhaseLoading] = useState(false)
   const [localPhases, setLocalPhases] = useState<any[]>(phases)
-  const [editingPhase, setEditingPhase] = useState<string | null>(null)
-const [phaseEdits, setPhaseEdits] = useState<Record<string, { depends_on: string; lag_days: number }>>({})
-const [phaseLoading, setPhaseLoading] = useState(false)
-const [localPhases, setLocalPhases] = useState<any[]>(phases)
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth())
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
 
