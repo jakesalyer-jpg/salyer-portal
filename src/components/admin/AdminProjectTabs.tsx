@@ -91,10 +91,12 @@ export default function AdminProjectTabs({ project, phases, selections, document
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [newMessage, setNewMessage] = useState('')
   const [msgLoading, setMsgLoading] = useState(false)
+
   const [editingPhase, setEditingPhase] = useState<string | null>(null)
   const [phaseEdits, setPhaseEdits] = useState<Record<string, { depends_on: string; lag_days: number }>>({})
   const [phaseLoading, setPhaseLoading] = useState(false)
   const [localPhases, setLocalPhases] = useState<any[]>(phases)
+
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth())
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
 
@@ -207,6 +209,7 @@ export default function AdminProjectTabs({ project, phases, selections, document
 
   return (
     <div>
+      {/* TABS NAV */}
       <div style={{ display: 'flex', gap: '0', borderBottom: `1px solid ${GOLD_LIGHT}`, marginBottom: '20px', overflowX: 'auto' }}>
         {TABS.map((t, i) => (
           <button key={t} onClick={() => setTab(i)} style={{ padding: '10px 18px', fontSize: '13px', fontWeight: 500, border: 'none', borderBottom: tab === i ? `2px solid ${GOLD}` : '2px solid transparent', background: 'none', color: tab === i ? GOLD : MUTED, cursor: 'pointer', whiteSpace: 'nowrap' }}>
@@ -215,7 +218,8 @@ export default function AdminProjectTabs({ project, phases, selections, document
         ))}
       </div>
 
-     {tab === 0 && (
+      {/* SCHEDULE */}
+      {tab === 0 && (
         <div>
           {/* Legend */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
@@ -298,7 +302,6 @@ export default function AdminProjectTabs({ project, phases, selections, document
 
               return (
                 <div key={phase.id} style={{ background: CARD, border: `1px solid ${GOLD_LIGHT}`, borderRadius: '8px', borderLeft: `3px solid ${color.bg}`, overflow: 'hidden' }}>
-                  {/* Row */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 14px' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -319,7 +322,9 @@ export default function AdminProjectTabs({ project, phases, selections, document
                     <StatusBadge status={phase.status} />
                     <button
                       onClick={() => {
-                        if (isEditing) { setEditingPhase(null) } else {
+                        if (isEditing) {
+                          setEditingPhase(null)
+                        } else {
                           setEditingPhase(phase.id)
                           setPhaseEdits(prev => ({ ...prev, [phase.id]: { depends_on: phase.depends_on ?? '', lag_days: phase.lag_days ?? 0 } }))
                         }
@@ -330,7 +335,6 @@ export default function AdminProjectTabs({ project, phases, selections, document
                     </button>
                   </div>
 
-                  {/* Inline edit panel */}
                   {isEditing && edit && (
                     <div style={{ padding: '10px 14px 12px', borderTop: `1px solid ${GOLD_LIGHT}`, background: 'rgba(184,151,106,0.03)', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '12px' }}>
                       <div>
@@ -349,9 +353,15 @@ export default function AdminProjectTabs({ project, phases, selections, document
                       <div>
                         <p style={{ fontSize: '10px', color: MUTED, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>Lag Days</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <button onClick={() => setPhaseEdits(prev => ({ ...prev, [phase.id]: { ...prev[phase.id], lag_days: Math.max(0, prev[phase.id].lag_days - 1) } }))} style={{ width: '28px', height: '28px', borderRadius: '5px', border: `1px solid ${BORDER}`, background: 'none', color: TEXT, fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                          <button
+                            onClick={() => setPhaseEdits(prev => ({ ...prev, [phase.id]: { ...prev[phase.id], lag_days: Math.max(0, prev[phase.id].lag_days - 1) } }))}
+                            style={{ width: '28px', height: '28px', borderRadius: '5px', border: `1px solid ${BORDER}`, background: 'none', color: TEXT, fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          >−</button>
                           <span style={{ fontSize: '13px', fontWeight: 600, color: TEXT, minWidth: '24px', textAlign: 'center' }}>{edit.lag_days}</span>
-                          <button onClick={() => setPhaseEdits(prev => ({ ...prev, [phase.id]: { ...prev[phase.id], lag_days: prev[phase.id].lag_days + 1 } }))} style={{ width: '28px', height: '28px', borderRadius: '5px', border: `1px solid ${BORDER}`, background: 'none', color: TEXT, fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                          <button
+                            onClick={() => setPhaseEdits(prev => ({ ...prev, [phase.id]: { ...prev[phase.id], lag_days: prev[phase.id].lag_days + 1 } }))}
+                            style={{ width: '28px', height: '28px', borderRadius: '5px', border: `1px solid ${BORDER}`, background: 'none', color: TEXT, fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          >+</button>
                         </div>
                       </div>
                       <button onClick={handleSavePhase} disabled={phaseLoading} style={{ ...btnStyle, padding: '6px 16px', fontSize: '12px' }}>
@@ -364,4 +374,200 @@ export default function AdminProjectTabs({ project, phases, selections, document
             })}
           </div>
         </div>
-      )} 
+      )}
+
+      {/* TO-DOS */}
+      {tab === 1 && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 0 10px', borderBottom: `1px solid ${GOLD_LIGHT}`, marginBottom: '4px' }}>
+            <div style={{ width: '22px', flexShrink: 0 }} />
+            <div style={{ width: '140px', flexShrink: 0 }}><span style={{ fontSize: '10px', fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Subcontractor</span></div>
+            <div style={{ flex: 1 }}><span style={{ fontSize: '10px', fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Task</span></div>
+            <div style={{ width: '130px', textAlign: 'right', flexShrink: 0 }}><span style={{ fontSize: '10px', fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Assigned To</span></div>
+          </div>
+
+          {todos.length === 0 && !addingTodo && <p style={{ fontSize: '13px', color: MUTED, padding: '16px 0' }}>No tasks yet.</p>}
+
+          {todos.map(todo => {
+            const isDone = todo.status === 'done'
+            const isEditing = editingTodo?.id === todo.id
+            const teamMember = team.find(m => m.id === todo.assigned_to)
+            if (isEditing) return (
+              <div key={todo.id} style={{ padding: '12px 0', borderBottom: `1px solid ${GOLD_LIGHT}` }}>
+                <input value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} autoFocus style={{ ...inputStyle, width: '100%', marginBottom: '8px', boxSizing: 'border-box' }} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                  <select value={editForm.subcontractor_id} onChange={e => setEditForm(f => ({ ...f, subcontractor_id: e.target.value }))} style={inputStyle}>
+                    <option value="">No Sub</option>
+                    {subcontractors.map(s => <option key={s.id} value={s.id}>{s.trade} — {s.name}</option>)}
+                  </select>
+                  <select value={editForm.assigned_to} onChange={e => setEditForm(f => ({ ...f, assigned_to: e.target.value }))} style={inputStyle}>
+                    <option value="">Unassigned</option>
+                    {team.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+                  </select>
+                  <select value={editForm.priority} onChange={e => setEditForm(f => ({ ...f, priority: e.target.value as Todo['priority'] }))} style={inputStyle}>
+                    <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
+                  </select>
+                  <select value={editForm.status} onChange={e => setEditForm(f => ({ ...f, status: e.target.value as Todo['status'] }))} style={inputStyle}>
+                    <option value="pending">Pending</option><option value="in_progress">In Progress</option><option value="done">Done</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={handleEditTodo} disabled={todoLoading} style={btnStyle}>{todoLoading ? 'Saving...' : 'Save'}</button>
+                  <button onClick={() => setEditingTodo(null)} style={btnOutline}>Cancel</button>
+                  <button onClick={() => handleDeleteTodo(todo.id)} style={{ ...btnOutline, color: '#ef4444', borderColor: '#fecaca', marginLeft: 'auto' }}>Delete</button>
+                </div>
+              </div>
+            )
+            return (
+              <div key={todo.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: `1px solid ${GOLD_LIGHT}` }}>
+                <button onClick={() => handleToggleTodo(todo)} style={{ width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0, border: `2px solid ${isDone ? GOLD : BORDER}`, background: isDone ? GOLD : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {isDone && <svg width="11" height="9" viewBox="0 0 11 9" fill="none"><path d="M1 4L4 7L10 1" stroke="#0a0a0a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                </button>
+                <div style={{ width: '140px', flexShrink: 0 }}>
+                  {todo.sub ? <span style={{ fontSize: '11px', fontWeight: 600, color: GOLD, background: 'rgba(184,151,106,0.1)', borderRadius: '5px', padding: '2px 7px', display: 'inline-block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{todo.sub.name}</span>
+                    : <span style={{ fontSize: '11px', color: MUTED, fontStyle: 'italic' }}>No sub</span>}
+                </div>
+                <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => openEditTodo(todo)}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '14px', color: isDone ? MUTED : TEXT, textDecoration: isDone ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{todo.title}</span>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: priorityColor(todo.priority), flexShrink: 0, display: 'inline-block' }} />
+                    {todo.status === 'in_progress' && <span style={{ fontSize: '10px', background: '#dbeafe', color: '#1d4ed8', borderRadius: '4px', padding: '1px 5px', fontWeight: 600, flexShrink: 0 }}>In Progress</span>}
+                  </div>
+                </div>
+                <div style={{ width: '130px', flexShrink: 0, textAlign: 'right' }}>
+                  {teamMember ? <span style={{ fontSize: '11px', fontWeight: 600, color: TEXT, background: 'rgba(184,151,106,0.08)', borderRadius: '5px', padding: '2px 7px', display: 'inline-block' }}>{teamMember.full_name}</span>
+                    : <span style={{ fontSize: '11px', color: MUTED, fontStyle: 'italic' }}>Unassigned</span>}
+                </div>
+              </div>
+            )
+          })}
+
+          {addingTodo ? (
+            <div style={{ padding: '12px 0', borderBottom: `1px solid ${GOLD_LIGHT}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                <div style={{ width: '22px', height: '22px', borderRadius: '50%', border: `2px solid ${GOLD}`, flexShrink: 0 }} />
+                <input placeholder="Task title" value={todoTitle} onChange={e => setTodoTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddTodo()} autoFocus style={{ ...inputStyle, flex: 1 }} />
+              </div>
+              <div style={{ display: 'flex', gap: '8px', paddingLeft: '32px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                <select value={todoSub} onChange={e => setTodoSub(e.target.value)} style={inputStyle}>
+                  <option value="">No Sub</option>
+                  {subcontractors.map(s => <option key={s.id} value={s.id}>{s.trade} — {s.name}</option>)}
+                </select>
+                <select value={todoAssigned} onChange={e => setTodoAssigned(e.target.value)} style={inputStyle}>
+                  <option value="">Unassigned</option>
+                  {team.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+                </select>
+                <select value={todoPriority} onChange={e => setTodoPriority(e.target.value as Todo['priority'])} style={inputStyle}>
+                  <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', paddingLeft: '32px' }}>
+                <button onClick={handleAddTodo} disabled={todoLoading} style={btnStyle}>{todoLoading ? 'Adding...' : 'Add'}</button>
+                <button onClick={() => { setAddingTodo(false); setTodoTitle('') }} style={btnOutline}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div onClick={() => setAddingTodo(true)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', cursor: 'pointer', color: MUTED, fontSize: '14px' }}>
+              <div style={{ width: '22px', height: '22px', borderRadius: '50%', border: `2px dashed ${GOLD}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: GOLD, fontSize: '16px' }}>+</div>
+              Add task
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SELECTIONS */}
+      {tab === 2 && (
+        <AdminSelectionManager projectId={project.id} initialSelections={selections} />
+      )}
+
+      {/* DAILY LOGS */}
+      {tab === 3 && (
+        <div>
+          <button onClick={() => setAddingLog(!addingLog)} style={{ ...btnStyle, marginBottom: '16px' }}>
+            {addingLog ? 'Cancel' : '+ New Log Entry'}
+          </button>
+          {addingLog && (
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
+              <div style={{ marginBottom: '12px' }}>
+                <p style={{ fontSize: '11px', color: MUTED, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Date</p>
+                <input type="date" value={logDate} onChange={e => setLogDate(e.target.value)} style={{ ...inputStyle, width: '200px' }} />
+              </div>
+              <div style={{ marginBottom: '12px' }}>
+                <p style={{ fontSize: '11px', color: MUTED, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Notes</p>
+                <textarea value={logNotes} onChange={e => setLogNotes(e.target.value)} rows={4} placeholder="What happened on site today?"
+                  style={{ ...inputStyle, width: '100%', boxSizing: 'border-box', resize: 'vertical' }} />
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={handleAddLog} disabled={logLoading || !logNotes.trim()} style={btnStyle}>{logLoading ? 'Saving...' : 'Save Log'}</button>
+                <button onClick={() => setAddingLog(false)} style={btnOutline}>Cancel</button>
+              </div>
+            </div>
+          )}
+          {logs.length === 0 && !addingLog && <p style={{ fontSize: '13px', color: MUTED }}>No daily logs yet.</p>}
+          {logs.map(log => (
+            <div key={log.id} style={{ background: CARD, border: `1px solid ${GOLD_LIGHT}`, borderRadius: '10px', padding: '16px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <div style={{ background: GOLD, borderRadius: '6px', padding: '4px 10px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#0a0a0a' }}>
+                    {new Date(log.log_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                </div>
+                <button onClick={() => handleDeleteLog(log.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '12px' }}>Delete</button>
+              </div>
+              {log.notes && <p style={{ fontSize: '13px', color: TEXT, lineHeight: 1.6, whiteSpace: 'pre-wrap', margin: 0 }}>{log.notes}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* DOCUMENTS */}
+      {tab === 4 && (
+        <div style={{ background: CARD, border: `1px solid ${GOLD_LIGHT}`, borderRadius: '10px', overflow: 'hidden' }}>
+          {documents.length === 0
+            ? <p style={{ padding: '20px', fontSize: '13px', color: MUTED }}>No documents uploaded yet.</p>
+            : documents.map((doc: any) => (
+              <div key={doc.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: `1px solid ${GOLD_LIGHT}` }}>
+                <div>
+                  <p style={{ fontSize: '13px', fontWeight: 500, color: TEXT, margin: '0 0 2px' }}>{doc.name}</p>
+                  <p style={{ fontSize: '11px', color: MUTED, margin: 0 }}>{formatDate(doc.created_at)}</p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '11px', color: doc.visible_to_client ? '#16a34a' : MUTED }}>{doc.visible_to_client ? 'Client visible' : 'Hidden'}</span>
+                  <a href={doc.file_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: GOLD, textDecoration: 'none' }}>View</a>
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      )}
+
+      {/* MESSAGING */}
+      {tab === 5 && (
+        <div>
+          <div style={{ background: CARD, border: `1px solid ${GOLD_LIGHT}`, borderRadius: '10px', padding: '16px', marginBottom: '12px', minHeight: '300px', maxHeight: '500px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {messages.length === 0 && <p style={{ fontSize: '13px', color: MUTED, textAlign: 'center', margin: 'auto' }}>No messages yet. Start the conversation.</p>}
+            {messages.map(msg => {
+              const isAdmin = msg.sender_role === 'admin'
+              return (
+                <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isAdmin ? 'flex-end' : 'flex-start' }}>
+                  <div style={{ background: isAdmin ? GOLD : '#1a1a1a', borderRadius: isAdmin ? '12px 12px 2px 12px' : '12px 12px 12px 2px', padding: '10px 14px', maxWidth: '70%', border: isAdmin ? 'none' : `1px solid ${GOLD_LIGHT}` }}>
+                    <p style={{ fontSize: '13px', color: isAdmin ? '#0a0a0a' : TEXT, lineHeight: 1.5, margin: 0 }}>{msg.body}</p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                    <span style={{ fontSize: '11px', color: MUTED }}>{msg.sender_name}</span>
+                    <span style={{ fontSize: '11px', color: MUTED }}>·</span>
+                    <span style={{ fontSize: '11px', color: MUTED }}>{new Date(msg.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input value={newMessage} onChange={e => setNewMessage(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} placeholder="Type a message..." style={{ ...inputStyle, flex: 1 }} />
+            <button onClick={handleSendMessage} disabled={msgLoading || !newMessage.trim()} style={btnStyle}>{msgLoading ? 'Sending...' : 'Send'}</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
