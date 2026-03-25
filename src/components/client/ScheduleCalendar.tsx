@@ -306,8 +306,7 @@ export default function ScheduleCalendar({ tasks: initialTasks, isAdmin, project
                         const start = isStart(task, day)
                         const end = task.due_date?.slice(0, 10) === `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
                         return (
-                          <div key={task.id} onClick={() => openTask(task)} style={{ background: task.is_completed ? 'rgba(100,100,100,0.3)' : c.bg, color: task.is_completed ? '#555' : c.text, borderRadius: start && end ? '3px' : start ? '3px 0 0 3px' : end ? '0 3px 3px 0' : '0', padding: '2px 5px', fontSize: '10px', fontWeight: 500, marginBottom: '2px', marginLeft: start ? '0' : '-4px', marginRight: end ? '0' : '-4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer', textDecoration: task.is_completed ? 'line-through' : 'none' }}>
-                            {(start || isSunday(day)) ? task.name : ''}
+ <div key={idx} style={{ minHeight: '90px', borderRight: '1px solid rgba(184,151,106,0.06)', borderBottom: '1px solid rgba(184,151,106,0.06)', padding: '4px', background: isWeekend ? 'rgba(255,255,255,0.01)' : 'transparent' }}>                           {(start || isSunday(day)) ? task.name : ''}
                           </div>
                         )
                       })}
