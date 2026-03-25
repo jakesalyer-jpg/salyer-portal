@@ -19,6 +19,12 @@ const COLORS = [
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
+const GOLD = '#b8976a'
+const BORDER = 'rgba(184,151,106,0.2)'
+const GOLD_LIGHT = 'rgba(184,151,106,0.12)'
+const TEXT = '#f5f0e8'
+const MUTED = '#6a5f50'
+
 interface Phase {
   id?: string
   name: string
@@ -35,7 +41,15 @@ interface Props {
   projects: { id: string; name: string; address: string }[]
 }
 
-function CalendarPreview({ phases, startDate }: { phases: Phase[], startDate: string }) {
+function CalendarPreview({
+  phases,
+  startDate,
+  onClickPhase,
+}: {
+  phases: Phase[]
+  startDate: string
+  onClickPhase: (index: number) => void
+}) {
   const [viewDate, setViewDate] = useState(() => startDate ? new Date(startDate + 'T00:00:00') : new Date())
   const year = viewDate.getFullYear()
   const month = viewDate.getMonth()
@@ -44,14 +58,15 @@ function CalendarPreview({ phases, startDate }: { phases: Phase[], startDate: st
   const today = new Date()
   const base = startDate ? new Date(startDate + 'T00:00:00') : new Date()
 
-  function getPhaseForDay(day: number) {
+  function getPhaseForDay(day: number): { phase: Phase; index: number } | null {
     const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
     let current = new Date(base)
-    for (const phase of phases) {
+    for (let i = 0; i < phases.length; i++) {
+      const phase = phases[i]
       const pStart = current.toISOString().slice(0,10)
       const pEnd = new Date(current.getTime() + phase.duration_days * 86400000)
       const pEndStr = pEnd.toISOString().slice(0,10)
-      if (dateStr >= pStart && dateStr < pEndStr) return phase
+      if (dateStr >= pStart && dateStr < pEndStr) return { phase, index: i }
       current = pEnd
     }
     return null
@@ -74,29 +89,32 @@ function CalendarPreview({ phases, startDate }: { phases: Phase[], startDate: st
   for (let d = 1; d <= daysInMonth; d++) cells.push(d)
 
   return (
-    <div style={{ background: '#111111', border: '1px solid rgba(184,151,106,0.12)', borderRadius: '8px', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid rgba(184,151,106,0.12)' }}>
-        <button onClick={() => setViewDate(new Date(year, month-1, 1))} style={{ background: 'none', border: '1px solid rgba(184,151,106,0.2)', borderRadius: '4px', color: '#b8976a', cursor: 'pointer', width: '28px', height: '28px', fontSize: '16px' }}>‹</button>
+    <div style={{ background: '#111111', border: `1px solid ${GOLD_LIGHT}`, borderRadius: '8px', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: `1px solid ${GOLD_LIGHT}` }}>
+        <button onClick={() => setViewDate(new Date(year, month-1, 1))} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: '4px', color: GOLD, cursor: 'pointer', width: '28px', height: '28px', fontSize: '16px' }}>‹</button>
         <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: '#d4b483' }}>{MONTHS[month]} {year}</span>
-        <button onClick={() => setViewDate(new Date(year, month+1, 1))} style={{ background: 'none', border: '1px solid rgba(184,151,106,0.2)', borderRadius: '4px', color: '#b8976a', cursor: 'pointer', width: '28px', height: '28px', fontSize: '16px' }}>›</button>
+        <button onClick={() => setViewDate(new Date(year, month+1, 1))} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: '4px', color: GOLD, cursor: 'pointer', width: '28px', height: '28px', fontSize: '16px' }}>›</button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', borderBottom: '1px solid rgba(184,151,106,0.08)' }}>
-        {DAYS.map(d => <div key={d} style={{ padding: '6px 2px', textAlign: 'center', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '1px', color: '#4a4030' }}>{d}</div>)}
+        {DAYS.map(d => <div key={d} style={{ padding: '6px 2px', textAlign: 'center', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '1px', color: MUTED }}>{d}</div>)}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}>
         {cells.map((day, idx) => {
           const isWeekend = day ? [0,6].includes(new Date(year,month,day).getDay()) : false
-          const phase = day ? getPhaseForDay(day) : null
+          const phaseInfo = day ? getPhaseForDay(day) : null
           const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear()
-          const c = COLORS.find(c => c.bg === phase?.color)
+          const c = phaseInfo ? COLORS.find(c => c.bg === phaseInfo.phase.color) : null
           return (
-            <div key={idx} style={{ minHeight: '64px', borderRight: '1px solid rgba(184,151,106,0.05)', borderBottom: '1px solid rgba(184,151,106,0.05)', padding: '3px 2px', background: isWeekend ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
+            <div key={idx} style={{ minHeight: '64px', borderRight: '1px solid rgba(184,151,106,0.05)', borderBottom: '1px solid rgba(184,151,106,0.05)', padding: '3px 2px', background: isWeekend ? 'rgba(255,255,255,0.01)' : 'transparent', position: 'relative' }}>
               {day && (
                 <>
-                  <div style={{ width: isToday ? '18px' : 'auto', height: isToday ? '18px' : 'auto', borderRadius: isToday ? '50%' : 0, background: isToday ? '#b8976a' : 'transparent', color: isToday ? '#0a0a0a' : '#4a4030', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '2px' }}>{day}</div>
-                  {phase && (
-                    <div style={{ background: phase.color, color: c?.text ?? '#fff', borderRadius: '2px', padding: '1px 3px', fontSize: '8px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {(isPhaseStart(phase, day) || isSunday(day)) ? phase.name : '\u00a0'}
+                  <div style={{ width: isToday ? '18px' : 'auto', height: isToday ? '18px' : 'auto', borderRadius: isToday ? '50%' : 0, background: isToday ? GOLD : 'transparent', color: isToday ? '#0a0a0a' : MUTED, fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '2px' }}>{day}</div>
+                  {phaseInfo && (
+                    <div
+                      onClick={() => onClickPhase(phaseInfo.index)}
+                      style={{ background: phaseInfo.phase.color, color: c?.text ?? '#fff', borderRadius: '2px', padding: '2px 4px', fontSize: '9px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer', position: 'relative', zIndex: 2, userSelect: 'none' }}
+                    >
+                      {(isPhaseStart(phaseInfo.phase, day) || isSunday(day)) ? phaseInfo.phase.name : '\u00a0'}
                     </div>
                   )}
                 </>
@@ -104,6 +122,9 @@ function CalendarPreview({ phases, startDate }: { phases: Phase[], startDate: st
             </div>
           )
         })}
+      </div>
+      <div style={{ padding: '8px 12px', borderTop: `1px solid ${GOLD_LIGHT}`, fontSize: '10px', color: MUTED }}>
+        Click a phase bar to edit it
       </div>
     </div>
   )
@@ -119,8 +140,43 @@ export default function EditTemplateClient({ template, initialPhases, projects }
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dragOver, setDragOver] = useState<number | null>(null)
   const [expandedPhase, setExpandedPhase] = useState<number | null>(null)
+
+  const [selectedPhaseIdx, setSelectedPhaseIdx] = useState<number | null>(null)
+  const [phaseEditForm, setPhaseEditForm] = useState<{
+    name: string
+    duration_days: string
+    color: string
+    depends_on: string
+    lag_days: string
+  }>({ name: '', duration_days: '', color: COLORS[0].bg, depends_on: '', lag_days: '0' })
+
   const router = useRouter()
   const supabase = createClient()
+
+  function openPhaseModal(index: number) {
+    const phase = phases[index]
+    setSelectedPhaseIdx(index)
+    setPhaseEditForm({
+      name: phase.name,
+      duration_days: String(phase.duration_days),
+      color: phase.color,
+      depends_on: phase.depends_on ?? '',
+      lag_days: String(phase.lag_days ?? 0),
+    })
+  }
+
+  function savePhaseModal() {
+    if (selectedPhaseIdx === null) return
+    setPhases(prev => prev.map((p, i) => i === selectedPhaseIdx ? {
+      ...p,
+      name: phaseEditForm.name,
+      duration_days: Math.max(1, parseInt(phaseEditForm.duration_days) || 1),
+      color: phaseEditForm.color,
+      depends_on: phaseEditForm.depends_on || undefined,
+      lag_days: parseInt(phaseEditForm.lag_days) || 0,
+    } : p))
+    setSelectedPhaseIdx(null)
+  }
 
   function updatePhase(index: number, field: string, value: any) {
     setPhases(phases.map((p, i) => i === index ? { ...p, [field]: value } : p))
@@ -164,25 +220,19 @@ export default function EditTemplateClient({ template, initialPhases, projects }
     setTimeout(() => setSaved(false), 2000)
   }
 
-  const inputStyle = { width: '100%', padding: '10px 14px', background: '#1a1a1a', border: '1px solid rgba(184,151,106,0.2)', borderRadius: '6px', color: '#f5f0e8', fontSize: '13px', outline: 'none' }
-  const labelStyle = { display: 'block' as const, fontSize: '10px', textTransform: 'uppercase' as const, letterSpacing: '1.5px', color: '#6a5f50', marginBottom: '6px' }
-  const card = { background: '#111111', border: '1px solid rgba(184,151,106,0.12)', borderRadius: '8px' }
+  const inputStyle = { width: '100%', padding: '10px 14px', background: '#1a1a1a', border: `1px solid ${BORDER}`, borderRadius: '6px', color: TEXT, fontSize: '13px', outline: 'none', boxSizing: 'border-box' as const }
+  const labelStyle = { display: 'block' as const, fontSize: '10px', textTransform: 'uppercase' as const, letterSpacing: '1.5px', color: MUTED, marginBottom: '6px' }
+  const card = { background: '#111111', border: `1px solid ${GOLD_LIGHT}`, borderRadius: '8px' }
   const totalDays = phases.reduce((sum, p) => sum + p.duration_days, 0)
-
-  const GOLD = '#b8976a'
-  const BORDER = 'rgba(184,151,106,0.2)'
-  const GOLD_LIGHT = 'rgba(184,151,106,0.12)'
-  const TEXT = '#f5f0e8'
-  const MUTED = '#6a5f50'
 
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' }}>
         <div>
-          <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 400, color: '#f5f0e8', marginBottom: '4px' }}>{name}</h1>
+          <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 400, color: TEXT, marginBottom: '4px' }}>{name}</h1>
           <p style={{ fontSize: '12px', color: '#4a4030' }}>{phases.length} phases · ~{Math.round(totalDays / 30)} months total</p>
         </div>
-        <button onClick={handleSave} disabled={saving} style={{ padding: '8px 20px', background: saved ? '#1a4a2a' : '#b8976a', color: saved ? '#70c090' : '#0a0a0a', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.2s' }}>
+        <button onClick={handleSave} disabled={saving} style={{ padding: '8px 20px', background: saved ? '#1a4a2a' : GOLD, color: saved ? '#70c090' : '#0a0a0a', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.2s' }}>
           {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save Changes'}
         </button>
       </div>
@@ -205,17 +255,13 @@ export default function EditTemplateClient({ template, initialPhases, projects }
           </div>
 
           <div style={{ ...card, overflow: 'hidden', marginBottom: '16px' }}>
-            <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(184,151,106,0.12)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <p style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#6a5f50' }}>Phases</p>
+            <div style={{ padding: '14px 20px', borderBottom: `1px solid ${GOLD_LIGHT}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1.5px', color: MUTED }}>Phases</p>
               <p style={{ fontSize: '10px', color: '#4a4030' }}>Drag ⠿ to reorder</p>
             </div>
 
             {phases.map((phase, i) => {
               const isExpanded = expandedPhase === i
-              const dependsOnPhase = phases.find((p, pi) => p.id === phase.depends_on || (String(pi) === phase.depends_on))
-              const dependsOnByIndex = phases.find((p, pi) => String(pi) === phase.depends_on)
-              const displayDepend = phases.find(p => p.id ? p.id === phase.depends_on : false) ?? dependsOnByIndex
-
               return (
                 <div
                   key={i}
@@ -224,12 +270,11 @@ export default function EditTemplateClient({ template, initialPhases, projects }
                   onDragOver={e => handleDragOver(e, i)}
                   onDrop={() => handleDrop(i)}
                   onDragEnd={() => { setDragIdx(null); setDragOver(null) }}
-                  style={{ borderBottom: '1px solid rgba(184,151,106,0.08)', background: dragOver === i ? 'rgba(184,151,106,0.06)' : dragIdx === i ? 'rgba(184,151,106,0.03)' : 'transparent', borderTop: dragOver === i ? '2px solid #b8976a' : '2px solid transparent', cursor: 'grab' }}
+                  style={{ borderBottom: '1px solid rgba(184,151,106,0.08)', background: dragOver === i ? 'rgba(184,151,106,0.06)' : dragIdx === i ? 'rgba(184,151,106,0.03)' : 'transparent', borderTop: dragOver === i ? `2px solid ${GOLD}` : '2px solid transparent', cursor: 'grab' }}
                 >
-                  {/* Main row */}
                   <div style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                      <span style={{ color: '#b8976a', fontSize: '16px', cursor: 'grab', flexShrink: 0, userSelect: 'none' }}>⠿</span>
+                      <span style={{ color: GOLD, fontSize: '16px', cursor: 'grab', flexShrink: 0, userSelect: 'none' }}>⠿</span>
                       <div style={{ width: '4px', height: '32px', borderRadius: '2px', background: phase.color, flexShrink: 0 }} />
                       <input value={phase.name} onChange={e => updatePhase(i, 'name', e.target.value)} onClick={e => e.stopPropagation()} style={{ ...inputStyle, flex: 1 }} />
                       <button
@@ -251,9 +296,8 @@ export default function EditTemplateClient({ template, initialPhases, projects }
                       </div>
                     </div>
 
-                    {/* Dependency badge when collapsed */}
                     {!isExpanded && (phase.depends_on || (phase.lag_days ?? 0) > 0) && (
-                      <div style={{ paddingLeft: '30px', marginTop: '6px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      <div style={{ paddingLeft: '30px', marginTop: '6px', display: 'flex', gap: '6px' }}>
                         {phase.depends_on && (
                           <span style={{ fontSize: '10px', color: GOLD, background: 'rgba(184,151,106,0.12)', border: `1px solid ${GOLD}44`, borderRadius: '4px', padding: '1px 6px' }}>
                             After: {phases.find((p, pi) => (p.id ? p.id === phase.depends_on : String(pi) === phase.depends_on))?.name ?? '—'}
@@ -269,7 +313,6 @@ export default function EditTemplateClient({ template, initialPhases, projects }
                     )}
                   </div>
 
-                  {/* Expanded dependency panel */}
                   {isExpanded && (
                     <div style={{ padding: '10px 16px 14px', borderTop: `1px solid ${GOLD_LIGHT}`, background: 'rgba(184,151,106,0.03)', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '16px' }}>
                       <div>
@@ -289,18 +332,11 @@ export default function EditTemplateClient({ template, initialPhases, projects }
                       <div>
                         <p style={{ fontSize: '10px', color: MUTED, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 6px' }}>Lag Days</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <button
-                            onClick={e => { e.stopPropagation(); updatePhase(i, 'lag_days', Math.max(0, (phase.lag_days ?? 0) - 1)) }}
-                            style={{ width: '28px', height: '28px', borderRadius: '5px', border: `1px solid ${BORDER}`, background: 'none', color: TEXT, fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          >−</button>
+                          <button onClick={e => { e.stopPropagation(); updatePhase(i, 'lag_days', Math.max(0, (phase.lag_days ?? 0) - 1)) }} style={{ width: '28px', height: '28px', borderRadius: '5px', border: `1px solid ${BORDER}`, background: 'none', color: TEXT, fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
                           <span style={{ fontSize: '13px', fontWeight: 600, color: TEXT, minWidth: '24px', textAlign: 'center' }}>{phase.lag_days ?? 0}</span>
-                          <button
-                            onClick={e => { e.stopPropagation(); updatePhase(i, 'lag_days', (phase.lag_days ?? 0) + 1) }}
-                            style={{ width: '28px', height: '28px', borderRadius: '5px', border: `1px solid ${BORDER}`, background: 'none', color: TEXT, fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          >+</button>
+                          <button onClick={e => { e.stopPropagation(); updatePhase(i, 'lag_days', (phase.lag_days ?? 0) + 1) }} style={{ width: '28px', height: '28px', borderRadius: '5px', border: `1px solid ${BORDER}`, background: 'none', color: TEXT, fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                         </div>
                       </div>
-                      <p style={{ fontSize: '11px', color: MUTED, margin: 0, alignSelf: 'flex-end', paddingBottom: '4px' }}>Changes save with the template.</p>
                     </div>
                   )}
                 </div>
@@ -308,14 +344,14 @@ export default function EditTemplateClient({ template, initialPhases, projects }
             })}
 
             <div style={{ padding: '12px 16px' }}>
-              <button onClick={addPhase} style={{ background: 'none', border: '1px dashed rgba(184,151,106,0.2)', borderRadius: '6px', color: '#6a5f50', cursor: 'pointer', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', padding: '8px 16px', width: '100%' }}>+ Add Phase</button>
+              <button onClick={addPhase} style={{ background: 'none', border: `1px dashed ${BORDER}`, borderRadius: '6px', color: MUTED, cursor: 'pointer', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', padding: '8px 16px', width: '100%' }}>+ Add Phase</button>
             </div>
           </div>
         </div>
 
         <div style={{ position: 'sticky', top: '24px' }}>
-          <p style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#6a5f50', marginBottom: '12px' }}>Live Calendar Preview</p>
-          <CalendarPreview phases={phases} startDate={startDate} />
+          <p style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1.5px', color: MUTED, marginBottom: '12px' }}>Live Calendar Preview</p>
+          <CalendarPreview phases={phases} startDate={startDate} onClickPhase={openPhaseModal} />
           <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {phases.map((p, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#4a4030' }}>
@@ -325,17 +361,73 @@ export default function EditTemplateClient({ template, initialPhases, projects }
             ))}
           </div>
 
-          <div style={{ marginTop: '24px', background: '#111111', border: '1px solid rgba(184,151,106,0.12)', borderRadius: '8px' }}>
-            <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(184,151,106,0.12)' }}>
-              <p style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#6a5f50' }}>Apply to Project</p>
+          <div style={{ marginTop: '24px', background: '#111111', border: `1px solid ${GOLD_LIGHT}`, borderRadius: '8px' }}>
+            <div style={{ padding: '14px 20px', borderBottom: `1px solid ${GOLD_LIGHT}` }}>
+              <p style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1.5px', color: MUTED }}>Apply to Project</p>
             </div>
             <div style={{ padding: '20px' }}>
-              <p style={{ fontSize: '13px', color: '#6a5f50', marginBottom: '16px' }}>Pick a project and start date — all phases will be created automatically.</p>
+              <p style={{ fontSize: '13px', color: MUTED, marginBottom: '16px' }}>Pick a project and start date — all phases will be created automatically.</p>
               <ApplyTemplateButton templateId={template.id} phases={phases} projects={projects} />
             </div>
           </div>
         </div>
       </div>
+
+      {/* Phase edit modal */}
+      {selectedPhaseIdx !== null && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }}>
+          <div style={{ background: '#111', border: `1px solid ${BORDER}`, borderRadius: '10px', padding: '24px', width: '100%', maxWidth: '480px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: TEXT }}>Edit Phase</h2>
+              <button onClick={() => setSelectedPhaseIdx(null)} style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: '20px' }}>×</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={labelStyle}>Phase Name</label>
+                <input value={phaseEditForm.name} onChange={e => setPhaseEditForm(f => ({ ...f, name: e.target.value }))} style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Duration (Work Days)</label>
+                <input type="number" min="1" value={phaseEditForm.duration_days} onChange={e => setPhaseEditForm(f => ({ ...f, duration_days: e.target.value }))} style={inputStyle} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '10px' }}>
+                <div>
+                  <label style={labelStyle}>Predecessor</label>
+                  <select value={phaseEditForm.depends_on} onChange={e => setPhaseEditForm(f => ({ ...f, depends_on: e.target.value }))} style={inputStyle}>
+                    <option value="">None</option>
+                    {phases.map((p, pi) => pi !== selectedPhaseIdx && (
+                      <option key={pi} value={p.id ?? String(pi)}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Lag Days</label>
+                  <input type="number" min="0" value={phaseEditForm.lag_days} onChange={e => setPhaseEditForm(f => ({ ...f, lag_days: e.target.value }))} style={inputStyle} />
+                </div>
+              </div>
+              <div>
+                <label style={labelStyle}>Color</label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {COLORS.map(c => (
+                    <button key={c.bg} onClick={() => setPhaseEditForm(f => ({ ...f, color: c.bg }))} style={{ width: '28px', height: '28px', borderRadius: '4px', background: c.bg, border: phaseEditForm.color === c.bg ? '2px solid #f5f0e8' : '2px solid transparent', cursor: 'pointer' }} />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
+              <button onClick={savePhaseModal} style={{ flex: 1, padding: '10px', background: GOLD, color: '#0a0a0a', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', cursor: 'pointer' }}>
+                Save Phase
+              </button>
+              <button onClick={() => { removePhase(selectedPhaseIdx); setSelectedPhaseIdx(null) }} style={{ padding: '10px 16px', background: 'none', border: '1px solid rgba(180,60,60,0.2)', borderRadius: '6px', color: '#e07070', fontSize: '12px', cursor: 'pointer' }}>
+                Delete
+              </button>
+              <button onClick={() => setSelectedPhaseIdx(null)} style={{ padding: '10px 16px', background: 'none', border: `1px solid ${BORDER}`, borderRadius: '6px', color: MUTED, fontSize: '12px', cursor: 'pointer' }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
