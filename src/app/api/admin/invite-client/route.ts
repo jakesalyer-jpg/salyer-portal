@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
   })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  if (error) return NextResponse.json({ error: error.message, code: error.status, details: JSON.stringify(error) }, { status: 400 })
 
   // Update profile with name/phone if provided
   if (full_name || phone) {
