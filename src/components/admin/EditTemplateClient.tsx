@@ -33,12 +33,60 @@ interface Phase {
   sort_order: number
   depends_on?: string
   lag_days?: number
+  parallel_with?: string
+  start_offset?: number
 }
 
 interface Props {
   template: any
   initialPhases: Phase[]
   projects: { id: string; name: string; address: string }[]
+}
+
+// Compute the start date (as ms offset from base) for each phase index
+function computePhaseStarts(phases: Phase[], baseMs: number): number[] {
+  const starts: number[] = new Array(phases.length).fill(-1)
+  const DAY = 86400000
+
+  // We resolve in sort_order. Phases with no dependency or parallel start sequentially.
+  // parallel_with: start at same time as referenced phase + start_offset days
+  // depends_on: start after referenced phase ends + lag_days
+
+  // Build a sequential cursor for phases that have no special relationship
+  let cursor = baseMs
+
+  for (let i = 0; i < phases.length; i++) {
+    const phase = phases[i]
+
+    if (phase.parallel_with) {
+      // Find the referenced phase index by id or string index
+      const refIdx = phases.findIndex((p, pi) =>
+        p.id ? p.id === phase.parallel_with : String(pi) === phase.parallel_with
+      )
+      if (refIdx !== -1 && starts[refIdx] !== -1) {
+        starts[i] = starts[refIdx] + (phase.start_offset ?? 0) * DAY
+        // Don't advance cursor — parallel phase doesn't push the sequence
+        continue
+      }
+    }
+
+    if (phase.depends_on) {
+      const refIdx = phases.findIndex((p, pi) =>
+        p.id ? p.id === phase.depends_on : String(pi) === phase.depends_on
+      )
+      if (refIdx !== -1 && starts[refIdx] !== -1) {
+        starts[i] = starts[refIdx] + phases[refIdx].duration_days * DAY + (phase.lag_days ?? 0) * DAY
+        cursor = Math.max(cursor, starts[i] + phase.duration_days * DAY)
+        continue
+      }
+    }
+
+    // Sequential fallback
+    starts[i] = cursor
+    cursor = cursor + phase.duration_days * DAY
+  }
+
+  return starts
 }
 
 function CalendarPreview({
@@ -57,29 +105,25 @@ function CalendarPreview({
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const today = new Date()
   const base = startDate ? new Date(startDate + 'T00:00:00') : new Date()
+  const DAY = 86400000
 
-  function getPhaseForDay(day: number): { phase: Phase; index: number } | null {
-    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
-    let current = new Date(base)
+  const phaseStarts = computePhaseStarts(phases, base.getTime())
+
+  function getPhasesForDay(day: number): { phase: Phase; index: number; isStart: boolean }[] {
+    const dateMs = new Date(year, month, day, 12, 0, 0).getTime()
+    const result: { phase: Phase; index: number; isStart: boolean }[] = []
     for (let i = 0; i < phases.length; i++) {
       const phase = phases[i]
-      const pStart = current.toISOString().slice(0,10)
-      const pEnd = new Date(current.getTime() + phase.duration_days * 86400000)
-      const pEndStr = pEnd.toISOString().slice(0,10)
-      if (dateStr >= pStart && dateStr < pEndStr) return { phase, index: i }
-      current = pEnd
+      const startMs = phaseStarts[i]
+      if (startMs === -1) continue
+      const endMs = startMs + phase.duration_days * DAY
+      if (dateMs >= startMs && dateMs < endMs) {
+        const startDateStr = new Date(startMs).toISOString().slice(0, 10)
+        const dayStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+        result.push({ phase, index: i, isStart: startDateStr === dayStr })
+      }
     }
-    return null
-  }
-
-  function isPhaseStart(phase: Phase, day: number) {
-    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
-    let current = new Date(base)
-    for (const p of phases) {
-      if (p === phase) return current.toISOString().slice(0,10) === dateStr
-      current = new Date(current.getTime() + p.duration_days * 86400000)
-    }
-    return false
+    return result
   }
 
   function isSunday(day: number) { return new Date(year, month, day).getDay() === 0 }
@@ -101,22 +145,25 @@ function CalendarPreview({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}>
         {cells.map((day, idx) => {
           const isWeekend = day ? [0,6].includes(new Date(year,month,day).getDay()) : false
-          const phaseInfo = day ? getPhaseForDay(day) : null
           const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear()
-          const c = phaseInfo ? COLORS.find(c => c.bg === phaseInfo.phase.color) : null
+          const dayPhases = day ? getPhasesForDay(day) : []
           return (
             <div key={idx} style={{ minHeight: '64px', borderRight: '1px solid rgba(184,151,106,0.05)', borderBottom: '1px solid rgba(184,151,106,0.05)', padding: '3px 2px', background: isWeekend ? 'rgba(255,255,255,0.01)' : 'transparent', position: 'relative' }}>
               {day && (
                 <>
                   <div style={{ width: isToday ? '18px' : 'auto', height: isToday ? '18px' : 'auto', borderRadius: isToday ? '50%' : 0, background: isToday ? GOLD : 'transparent', color: isToday ? '#0a0a0a' : MUTED, fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '2px' }}>{day}</div>
-                  {phaseInfo && (
-                    <div
-                      onClick={() => onClickPhase(phaseInfo.index)}
-                      style={{ background: phaseInfo.phase.color, color: c?.text ?? '#fff', borderRadius: '2px', padding: '2px 4px', fontSize: '9px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer', position: 'relative', zIndex: 2, userSelect: 'none' }}
-                    >
-                      {(isPhaseStart(phaseInfo.phase, day) || isSunday(day)) ? phaseInfo.phase.name : '\u00a0'}
-                    </div>
-                  )}
+                  {dayPhases.map(({ phase, index, isStart }) => {
+                    const c = COLORS.find(c => c.bg === phase.color)
+                    return (
+                      <div
+                        key={index}
+                        onClick={() => onClickPhase(index)}
+                        style={{ background: phase.color, color: c?.text ?? '#fff', borderRadius: '2px', padding: '2px 4px', fontSize: '9px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer', position: 'relative', zIndex: 2, userSelect: 'none', marginBottom: '1px' }}
+                      >
+                        {(isStart || isSunday(day)) ? phase.name : '\u00a0'}
+                      </div>
+                    )
+                  })}
                 </>
               )}
             </div>
@@ -148,7 +195,9 @@ export default function EditTemplateClient({ template, initialPhases, projects }
     color: string
     depends_on: string
     lag_days: string
-  }>({ name: '', duration_days: '', color: COLORS[0].bg, depends_on: '', lag_days: '0' })
+    parallel_with: string
+    start_offset: string
+  }>({ name: '', duration_days: '', color: COLORS[0].bg, depends_on: '', lag_days: '0', parallel_with: '', start_offset: '0' })
 
   const router = useRouter()
   const supabase = createClient()
@@ -162,18 +211,24 @@ export default function EditTemplateClient({ template, initialPhases, projects }
       color: phase.color,
       depends_on: phase.depends_on ?? '',
       lag_days: String(phase.lag_days ?? 0),
+      parallel_with: phase.parallel_with ?? '',
+      start_offset: String(phase.start_offset ?? 0),
     })
   }
 
   function savePhaseModal() {
     if (selectedPhaseIdx === null) return
+    // Can't have both parallel_with and depends_on — parallel takes priority if set
+    const hasParallel = !!phaseEditForm.parallel_with
     setPhases(prev => prev.map((p, i) => i === selectedPhaseIdx ? {
       ...p,
       name: phaseEditForm.name,
       duration_days: Math.max(1, parseInt(phaseEditForm.duration_days) || 1),
       color: phaseEditForm.color,
-      depends_on: phaseEditForm.depends_on || undefined,
-      lag_days: parseInt(phaseEditForm.lag_days) || 0,
+      depends_on: hasParallel ? undefined : (phaseEditForm.depends_on || undefined),
+      lag_days: hasParallel ? 0 : (parseInt(phaseEditForm.lag_days) || 0),
+      parallel_with: phaseEditForm.parallel_with || undefined,
+      start_offset: parseInt(phaseEditForm.start_offset) || 0,
     } : p))
     setSelectedPhaseIdx(null)
   }
@@ -183,7 +238,7 @@ export default function EditTemplateClient({ template, initialPhases, projects }
   }
 
   function addPhase() {
-    setPhases([...phases, { name: 'New Phase', duration_days: 14, color: '#4a3a1a', sort_order: phases.length, depends_on: '', lag_days: 0 }])
+    setPhases([...phases, { name: 'New Phase', duration_days: 14, color: '#4a3a1a', sort_order: phases.length }])
   }
 
   function removePhase(index: number) {
@@ -214,6 +269,8 @@ export default function EditTemplateClient({ template, initialPhases, projects }
       sort_order: p.sort_order,
       depends_on: p.depends_on || null,
       lag_days: p.lag_days ?? 0,
+      parallel_with: p.parallel_with || null,
+      start_offset: p.start_offset ?? 0,
     })))
     setSaving(false)
     setSaved(true)
@@ -262,6 +319,9 @@ export default function EditTemplateClient({ template, initialPhases, projects }
 
             {phases.map((phase, i) => {
               const isExpanded = expandedPhase === i
+              const parallelPhase = phases.find((p, pi) => p.id ? p.id === phase.parallel_with : String(pi) === phase.parallel_with)
+              const dependsOnPhase = phases.find((p, pi) => p.id ? p.id === phase.depends_on : String(pi) === phase.depends_on)
+
               return (
                 <div
                   key={i}
@@ -296,15 +356,20 @@ export default function EditTemplateClient({ template, initialPhases, projects }
                       </div>
                     </div>
 
-                    {!isExpanded && (phase.depends_on || (phase.lag_days ?? 0) > 0) && (
-                      <div style={{ paddingLeft: '30px', marginTop: '6px', display: 'flex', gap: '6px' }}>
-                        {phase.depends_on && (
-                          <span style={{ fontSize: '10px', color: GOLD, background: 'rgba(184,151,106,0.12)', border: `1px solid ${GOLD}44`, borderRadius: '4px', padding: '1px 6px' }}>
-                            After: {phases.find((p, pi) => (p.id ? p.id === phase.depends_on : String(pi) === phase.depends_on))?.name ?? '—'}
-                            {(phase.lag_days ?? 0) > 0 ? ` +${phase.lag_days}d` : ''}
+                    {/* Badges */}
+                    {!isExpanded && (parallelPhase || dependsOnPhase || (phase.lag_days ?? 0) > 0) && (
+                      <div style={{ paddingLeft: '30px', marginTop: '6px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        {parallelPhase && (
+                          <span style={{ fontSize: '10px', color: '#70a0f0', background: 'rgba(106,143,184,0.12)', border: '1px solid rgba(106,143,184,0.3)', borderRadius: '4px', padding: '1px 6px' }}>
+                            ∥ {parallelPhase.name}{(phase.start_offset ?? 0) > 0 ? ` +${phase.start_offset}d` : ''}
                           </span>
                         )}
-                        {!phase.depends_on && (phase.lag_days ?? 0) > 0 && (
+                        {!parallelPhase && dependsOnPhase && (
+                          <span style={{ fontSize: '10px', color: GOLD, background: 'rgba(184,151,106,0.12)', border: `1px solid ${GOLD}44`, borderRadius: '4px', padding: '1px 6px' }}>
+                            After: {dependsOnPhase.name}{(phase.lag_days ?? 0) > 0 ? ` +${phase.lag_days}d` : ''}
+                          </span>
+                        )}
+                        {!parallelPhase && !dependsOnPhase && (phase.lag_days ?? 0) > 0 && (
                           <span style={{ fontSize: '10px', color: MUTED, background: 'rgba(106,95,80,0.12)', border: `1px solid ${MUTED}44`, borderRadius: '4px', padding: '1px 6px' }}>
                             +{phase.lag_days}d lag
                           </span>
@@ -317,16 +382,9 @@ export default function EditTemplateClient({ template, initialPhases, projects }
                     <div style={{ padding: '10px 16px 14px', borderTop: `1px solid ${GOLD_LIGHT}`, background: 'rgba(184,151,106,0.03)', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '16px' }}>
                       <div>
                         <p style={{ fontSize: '10px', color: MUTED, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 6px' }}>Depends On</p>
-                        <select
-                          value={phase.depends_on ?? ''}
-                          onChange={e => updatePhase(i, 'depends_on', e.target.value)}
-                          onClick={e => e.stopPropagation()}
-                          style={{ padding: '8px 12px', background: '#1a1a1a', border: `1px solid ${BORDER}`, borderRadius: '6px', color: TEXT, fontSize: '12px', outline: 'none' }}
-                        >
+                        <select value={phase.depends_on ?? ''} onChange={e => updatePhase(i, 'depends_on', e.target.value)} onClick={e => e.stopPropagation()} style={{ padding: '8px 12px', background: '#1a1a1a', border: `1px solid ${BORDER}`, borderRadius: '6px', color: TEXT, fontSize: '12px', outline: 'none' }}>
                           <option value="">None</option>
-                          {phases.map((p, pi) => pi !== i && (
-                            <option key={pi} value={p.id ?? String(pi)}>{p.name}</option>
-                          ))}
+                          {phases.map((p, pi) => pi !== i && <option key={pi} value={p.id ?? String(pi)}>{p.name}</option>)}
                         </select>
                       </div>
                       <div>
@@ -376,36 +434,72 @@ export default function EditTemplateClient({ template, initialPhases, projects }
       {/* Phase edit modal */}
       {selectedPhaseIdx !== null && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }}>
-          <div style={{ background: '#111', border: `1px solid ${BORDER}`, borderRadius: '10px', padding: '24px', width: '100%', maxWidth: '480px' }}>
+          <div style={{ background: '#111', border: `1px solid ${BORDER}`, borderRadius: '10px', padding: '24px', width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: TEXT }}>Edit Phase</h2>
               <button onClick={() => setSelectedPhaseIdx(null)} style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: '20px' }}>×</button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Name */}
               <div>
                 <label style={labelStyle}>Phase Name</label>
                 <input value={phaseEditForm.name} onChange={e => setPhaseEditForm(f => ({ ...f, name: e.target.value }))} style={inputStyle} />
               </div>
+
+              {/* Duration */}
               <div>
                 <label style={labelStyle}>Duration (Work Days)</label>
                 <input type="number" min="1" value={phaseEditForm.duration_days} onChange={e => setPhaseEditForm(f => ({ ...f, duration_days: e.target.value }))} style={inputStyle} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '10px' }}>
-                <div>
-                  <label style={labelStyle}>Predecessor</label>
-                  <select value={phaseEditForm.depends_on} onChange={e => setPhaseEditForm(f => ({ ...f, depends_on: e.target.value }))} style={inputStyle}>
-                    <option value="">None</option>
-                    {phases.map((p, pi) => pi !== selectedPhaseIdx && (
-                      <option key={pi} value={p.id ?? String(pi)}>{p.name}</option>
-                    ))}
-                  </select>
+
+              {/* Divider */}
+              <div style={{ borderTop: `1px solid ${GOLD_LIGHT}`, paddingTop: '14px' }}>
+                <p style={{ fontSize: '11px', color: MUTED, marginBottom: '12px' }}>Choose one: run after another phase, or run alongside one.</p>
+
+                {/* Depends On + Lag */}
+                <div style={{ background: phaseEditForm.parallel_with ? 'rgba(0,0,0,0.2)' : 'rgba(184,151,106,0.04)', border: `1px solid ${phaseEditForm.parallel_with ? 'transparent' : GOLD_LIGHT}`, borderRadius: '6px', padding: '12px', marginBottom: '10px', opacity: phaseEditForm.parallel_with ? 0.4 : 1 }}>
+                  <p style={{ fontSize: '10px', color: GOLD, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '10px' }}>Sequential — runs after</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '10px' }}>
+                    <div>
+                      <label style={labelStyle}>Predecessor</label>
+                      <select value={phaseEditForm.depends_on} onChange={e => setPhaseEditForm(f => ({ ...f, depends_on: e.target.value, parallel_with: '', start_offset: '0' }))} style={inputStyle} disabled={!!phaseEditForm.parallel_with}>
+                        <option value="">None</option>
+                        {phases.map((p, pi) => pi !== selectedPhaseIdx && (
+                          <option key={pi} value={p.id ?? String(pi)}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Lag Days</label>
+                      <input type="number" min="0" value={phaseEditForm.lag_days} onChange={e => setPhaseEditForm(f => ({ ...f, lag_days: e.target.value }))} style={inputStyle} disabled={!!phaseEditForm.parallel_with} />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label style={labelStyle}>Lag Days</label>
-                  <input type="number" min="0" value={phaseEditForm.lag_days} onChange={e => setPhaseEditForm(f => ({ ...f, lag_days: e.target.value }))} style={inputStyle} />
+
+                {/* Parallel With + Offset */}
+                <div style={{ background: phaseEditForm.depends_on ? 'rgba(0,0,0,0.2)' : 'rgba(106,143,184,0.04)', border: `1px solid ${phaseEditForm.depends_on ? 'transparent' : 'rgba(106,143,184,0.2)'}`, borderRadius: '6px', padding: '12px', opacity: phaseEditForm.depends_on ? 0.4 : 1 }}>
+                  <p style={{ fontSize: '10px', color: '#70a0f0', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '10px' }}>Parallel — runs alongside</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '10px' }}>
+                    <div>
+                      <label style={labelStyle}>Run Alongside</label>
+                      <select value={phaseEditForm.parallel_with} onChange={e => setPhaseEditForm(f => ({ ...f, parallel_with: e.target.value, depends_on: '', lag_days: '0' }))} style={inputStyle} disabled={!!phaseEditForm.depends_on}>
+                        <option value="">None</option>
+                        {phases.map((p, pi) => pi !== selectedPhaseIdx && (
+                          <option key={pi} value={p.id ?? String(pi)}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Start Offset</label>
+                      <input type="number" min="0" value={phaseEditForm.start_offset} onChange={e => setPhaseEditForm(f => ({ ...f, start_offset: e.target.value }))} style={inputStyle} disabled={!!phaseEditForm.depends_on} placeholder="0" />
+                    </div>
+                  </div>
+                  <p style={{ fontSize: '10px', color: MUTED, marginTop: '8px' }}>Start offset = days after the parallel phase begins (0 = same day)</p>
                 </div>
               </div>
+
+              {/* Color */}
               <div>
                 <label style={labelStyle}>Color</label>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
